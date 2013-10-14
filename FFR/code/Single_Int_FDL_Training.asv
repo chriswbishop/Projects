@@ -176,7 +176,9 @@ else
   par_vals   = args.par_vals;  % test these conditions (delta f)
 end
 
-% 131014 CWB: Seed random number generator
+% 131014 CWB: Seed random number generator so we don't get the same
+% sequence of events each time.
+
  % Randomize order of signal parameters in Signal+Noise and Noise trials
 par_vals   = repmat(par_vals,1,args.n_trialsperstim); % preset numbers
 par_vals   = par_vals(randperm(length(par_vals)));    % shuffle trials
