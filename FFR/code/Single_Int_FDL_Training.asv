@@ -5,6 +5,11 @@ function varargout = Single_Int_FDL_Training(varargin)
 % Use Example:
 %   Single_Int_FDL_Training (parameter_file), where parameter_file is an m-file
 %   function stored in the same folder as the m-files for this gui.
+%
+%   131015 CWB: Would be useful to have the ability to pickup where we left
+%   off in the event the test crashes in the middle. Will need to implement
+%   this functionality. 
+%
 %%
 %SINGLE_INT_FDL_TRAINING M-file for Single_Int_FDL_Training.fig
 %      SINGLE_INT_FDL_TRAINING, by itself, creates a new SINGLE_INT_FDL_TRAINING or raises the existing
@@ -161,8 +166,22 @@ frequency  = str2double(args.freq{:});
   % make filename for .mat file (e.g. 111_ToneInNx500Hz_b1TIMESTAMP.mat)
   % %%%%% CGC: MAY ADD if statement to include TRAIN or TEST in the filename  %%%%%%
   % %%%%%  CGC: MAY ALSO ADD SESSION # or 'pre' 'train' or 'post' to filename.
-filename = [num2str(args.subject_id{:}) '_FDL_Train', ...
-       num2str(frequency) 'Hz_b', num2str(args.block_number{:})];
+  
+ofile = ['../behavior/', num2str(args.subject_id{:}) '_FDL_' num2str(frequency) 'Hz_b' num2str(args.block_number{:})];
+
+%% 131016 CWB: Check to see if file already exists
+if exist(ofile, 'file')
+    warning([ofile ' already exists!']);
+    ow = input('Overwrite file? (Y/N)');
+    ow = upper(ow); % force upper case
+else
+    ow = 'Y'; % "overwrite" flag set to 'Y' by default
+end % end file check
+
+% Exit function if we don't want to overwrite
+if strcmp(ow, 'N')==1
+    return
+end 
 pause(1.0);
 
 %% Check to do practice/familiarization run
@@ -171,13 +190,14 @@ if strcmpi(answer(5), 'yes') == 1   % YES, this is a training run
 
   par_vals =  args.par_vals;   % assign stimulus levels from parameter file
   args.n_trialsperstim = 3;    % this many trials per stimulus, in practice
-  filename = [filename '_PRACTICE_'];
+  filename = [filename '_PRACT`ICE_'];
 else
   par_vals   = args.par_vals;  % test these conditions (delta f)
 end
 
 % 131014 CWB: Seed random number generator so we don't get the same
 % sequence of events each time.
+rng('shuffle', 'twister');
 
  % Randomize order of signal parameters in Signal+Noise and Noise trials
 par_vals   = repmat(par_vals,1,args.n_trialsperstim); % preset numbers
@@ -244,7 +264,7 @@ while ~stopnow
 %       [tone noise]  = make_tone_plus_noise(frequency, par_vals(signal_trials));  %%%%%%%%% 6/13/2012 
 %       [tone_final] = make_AM_FDL_tones_2freq_4FFR(fs, carrier_freq1, carrier_freq2, calibrate, save_wav)
       carrier_freq2 = frequency - par_vals(signal_trials);
-      [tone] = make_AM_FDL_tones_2freq_4FFR(args.samprate, frequency, carrier_freq2, 0, 0);
+      [tone] = make_AM_FDL_tones_2freq_4FFR(args.samprate, frequency, carrier_freq2, false, false, args.AM, args.duration, false, 'SIN');
       par_by_trial(i) = par_vals(signal_trials);
       
     else                 % present NOISE only or CATCH trial
@@ -252,7 +272,7 @@ while ~stopnow
 %       [tone noise]  = make_tone_plus_noise(frequency, catch_vals(catch_trials));  %%%%%%%%% 6/13/2012 
        carrier_freq2 = frequency - catch_vals(catch_trials);
        %%% In Catch Trials, present both halves as the deltaf(e.g., 990 Hz)
-      [tone] = make_AM_FDL_tones_2freq_4FFR(args.samprate, carrier_freq2, carrier_freq2, 0, 0);
+      [tone] = make_AM_FDL_tones_2freq_4FFR(args.samprate, carrier_freq2, carrier_freq2, false, false, args.AM, args.duration, false, 'SIN');
 
       par_by_trial(i) = catch_vals(catch_trials);
     end
@@ -289,10 +309,15 @@ while ~stopnow
       % Present Stimuli
     if order(i) == 1       % SIGNAL+NOISE trial
         set(handles.stim_button,'BackgroundColor', 'b' );
-          sound(tone   ,args.samprate);        
+        %% 131016 CWB: Use audioplayer to allow play blocking.
+        player = audioplayer(tone, args.samprate); 
+        player.playblocking(); 
+%           sound(tone   ,args.samprate);        
         set(handles.stim_button,'BackgroundColor', grey);
     else                   % NOISE trial
         set(handles.stim_button,'BackgroundColor', 'b' );
+        player = audioplayer(tone, args.samprate); 
+        player.playblocking(); 
           sound(tone   ,args.samprate);   
         set(handles.stim_button,'BackgroundColor', grey);
     end
@@ -336,18 +361,25 @@ while ~stopnow
     % Enable button for next trial
     set(handles.next,'enable','on')
     set(handles.next,'BackgroundColor','b');%Make "Next" button blue
+    
+    % 131015 CWB: Added OR isempty(NEXT) to satisfy first time through
+    % loop. 
+    NEXT = nan;
     while isnan(NEXT)
         pause(0.1)
     end
-    NEXT = nan;
+    
     set(handles.next,'BackgroundColor',[0.925,0.94,0.847]); 
     set(handles.next,'enable','off') % disable next button
     
-     % Save temporary .mat file after each trial, overwrite each time
-   if calibrate < 1
-    temp_filename = [ args.path 'temp_behavior\ProjZA' filename '_TEMP_' ];
-    save(temp_filename)
-   end
+  %% SAVE SUBJECT SPECIFIC MAT FILE AFTER EACH TRIAL
+  % Save stack after each trial. This way if it crashes we can potentially
+  % pick up where we left off. 
+    % Save temporary .mat file after each trial, overwrite each time
+     
+    if calibrate < 1
+        save(ofile);
+    end
    
      % Time to stop test?
     if i >= length(order);       stopnow = 1;         end
@@ -358,8 +390,9 @@ time_end = clock; % End the stopwatch
 test_duration = time_end - time_start;  % it took this long to complete the test
 disp('DONE WITH THE TEST!')
 close(gcf)                              % Close the GUI figure
+
   % Call Script to calculate d' and plot results
-FDL_Training_Post_Processing  
+% FDL_Training_Post_Processing  
 end
 
 function [answer] = info_prompt
