@@ -1,0 +1,23 @@
+bin 1
+Ape(50dB)
+.{10}
+
+bin 2
+Ape(55dB)
+.{11}
+
+bin 3
+Ape(60dB)
+.{12}
+
+bin 4
+Ape(65dB)
+.{13}
+
+bin 5
+Ape(70dB)
+.{14}
+
+bin 6
+Ape(76dB)
+.{15}

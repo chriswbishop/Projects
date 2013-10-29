@@ -1,0 +1,4 @@
+ch1=ch1-ch4 label A1-M1
+ch2=ch2-ch4 label A2-M1
+ch3=ch3-ch4 label A3-M1
+ch4=ch4-ch4 label M1-M1

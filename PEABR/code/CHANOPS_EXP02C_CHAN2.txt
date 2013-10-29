@@ -1,0 +1,2 @@
+ch1=ch1-ch2 label A1-CH2
+ch2=ch2-ch2 label CH2-CH2

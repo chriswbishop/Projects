@@ -1,0 +1,13 @@
+b27=b3-(b1+b5) label Left Interaction   
+b28=b4-(b2+b6) label Right Interaction  
+b29=b22-(b19+b26) label Interaction     
+b30=b9-b8 label Right A - Left A        
+b31=b8-b9 label Left A - Right A        
+b32=b6-b5 label Right Flash - Left Flash
+b33=b5-b6 label Left Flash - Right Flash
+b34=b11-b12 label Left Ape (S-NS)       
+b35=b13-b14 label Right Ape (S-NS)      
+b36=b20-b21 label Ape (S-NS)            
+b37=b15-b16 label Left ApeVLead (S-NS)  
+b38=b17-b18 label Right ApeVLead (S-NS) 
+b39=b23-b24 label ApeVLead (S-NS)       

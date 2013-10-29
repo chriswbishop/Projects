@@ -1,0 +1,479 @@
+bin 1
+Ape;Cds;1
+.{51}
+
+bin 2
+Ape;Cds;2
+.{52}
+
+bin 3
+Ape;Cds;3
+.{53}
+
+bin 4
+Ape;Cds;4
+.{54}
+
+bin 5
+Ape;Cds;5
+.{55}
+
+bin 6
+Ape;Cds;6
+.{56}
+
+bin 7
+Ape;Cds;7
+.{57}
+
+bin 8
+Ape;Cds;8
+.{58}
+
+bin 9
+Ape;Cds;9
+.{59}
+
+bin 10
+Ape;Cds;10
+.{60}
+
+bin 11
+Ape;Cds;11
+.{61}
+
+bin 12
+Ape;Cds;12
+.{62}
+
+bin 13
+Ape;Cds;13
+.{63}
+
+bin 14
+Ape;Cds;14
+.{64}
+
+bin 15
+Ape;Cds;15
+.{65}
+
+bin 16
+Ape;Cds;16
+.{66}
+
+bin 17
+Ape;Cds;17
+.{67}
+
+bin 18
+Ape;Cds;18
+.{68}
+
+bin 19
+Ape;Cds;19
+.{69}
+
+bin 20
+Ape;Cds;20
+.{70}
+
+bin 21
+Ape;Ref;1
+.{71}
+
+bin 22
+Ape;Ref;2
+.{72}
+
+bin 23
+Ape;Ref;3
+.{73}
+
+bin 24
+Ape;Ref;4
+.{74}
+
+bin 25
+Ape;Ref;5
+.{75}
+
+bin 26
+Ape;Ref;6
+.{76}
+
+bin 27
+Ape;Ref;7
+.{77}
+
+bin 28
+Ape;Ref;8
+.{78}
+
+bin 29
+Ape;Ref;9
+.{79}
+
+bin 30
+Ape;Ref;10
+.{80}
+
+bin 31
+Ape;Ref;11
+.{81}
+
+bin 32
+Ape;Ref;12
+.{82}
+
+bin 33
+Ape;Ref;13
+.{83}
+
+bin 34
+Ape;Ref;14
+.{84}
+
+bin 35
+Ape;Ref;15
+.{85}
+
+bin 36
+Ape;Ref;16
+.{86}
+
+bin 37
+Ape;Ref;17
+.{87}
+
+bin 38
+Ape;Ref;18
+.{88}
+
+bin 39
+Ape;Ref;19
+.{89}
+
+bin 40
+Ape;Ref;20
+.{90}
+
+bin 41
+Lead;Cds;1
+.{101}
+
+bin 42
+Lead;Cds;2
+.{102}
+
+bin 43
+Lead;Cds;3
+.{103}
+
+bin 44
+Lead;Cds;4
+.{104}
+
+bin 45
+Lead;Cds;5
+.{105}
+
+bin 46
+Lead;Cds;6
+.{106}
+
+bin 47
+Lead;Cds;7
+.{107}
+
+bin 48
+Lead;Cds;8
+.{108}
+
+bin 49
+Lead;Cds;9
+.{109}
+
+bin 50
+Lead;Cds;10
+.{110}
+
+bin 51
+Lead;Cds;11
+.{111}
+
+bin 52
+Lead;Cds;12
+.{112}
+
+bin 53
+Lead;Cds;13
+.{113}
+
+bin 54
+Lead;Cds;14
+.{114}
+
+bin 55
+Lead;Cds;15
+.{115}
+
+bin 56
+Lead;Cds;16
+.{116}
+
+bin 57
+Lead;Cds;17
+.{117}
+
+bin 58
+Lead;Cds;18
+.{118}
+
+bin 59
+Lead;Cds;19
+.{119}
+
+bin 60
+Lead;Cds;20
+.{120}
+
+bin 61
+Lead;Ref;1
+.{121}
+
+bin 62
+Lead;Ref;2
+.{122}
+
+bin 63
+Lead;Ref;3
+.{123}
+
+bin 64
+Lead;Ref;4
+.{124}
+
+bin 65
+Lead;Ref;5
+.{125}
+
+bin 66
+Lead;Ref;6
+.{126}
+
+bin 67
+Lead;Ref;7
+.{127}
+
+bin 68
+Lead;Ref;8
+.{128}
+
+bin 69
+Lead;Ref;9
+.{129}
+
+bin 70
+Lead;Ref;10
+.{130}
+
+bin 71
+Lead;Ref;11
+.{131}
+
+bin 72
+Lead;Ref;12
+.{132}
+
+bin 73
+Lead;Ref;13
+.{133}
+
+bin 74
+Lead;Ref;14
+.{134}
+
+bin 75
+Lead;Ref;15
+.{135}
+
+bin 76
+Lead;Ref;16
+.{136}
+
+bin 77
+Lead;Ref;17
+.{137}
+
+bin 78
+Lead;Ref;18
+.{138}
+
+bin 79
+Lead;Ref;19
+.{139}
+
+bin 80
+Lead;Ref;20
+.{140}
+
+bin 81
+Lag;Cds;1
+.{201}
+
+bin 82
+Lag;Cds;2
+.{202}
+
+bin 83
+Lag;Cds;3
+.{203}
+
+bin 84
+Lag;Cds;4
+.{204}
+
+bin 85
+Lag;Cds;5
+.{205}
+
+bin 86
+Lag;Cds;6
+.{206}
+
+bin 87
+Lag;Cds;7
+.{207}
+
+bin 88
+Lag;Cds;8
+.{208}
+
+bin 89
+Lag;Cds;9
+.{209}
+
+bin 90
+Lag;Cds;10
+.{210}
+
+bin 91
+Lag;Cds;11
+.{211}
+
+bin 92
+Lag;Cds;12
+.{212}
+
+bin 93
+Lag;Cds;13
+.{213}
+
+bin 94
+Lag;Cds;14
+.{214}
+
+bin 95
+Lag;Cds;15
+.{215}
+
+bin 96
+Lag;Cds;16
+.{216}
+
+bin 97
+Lag;Cds;17
+.{217}
+
+bin 98
+Lag;Cds;18
+.{218}
+
+bin 99
+Lag;Cds;19
+.{219}
+
+bin 100
+Lag;Cds;20
+.{220}
+
+bin 101
+Lag;Ref;1
+.{221}
+
+bin 102
+Lag;Ref;2
+.{222}
+
+bin 103
+Lag;Ref;3
+.{223}
+
+bin 104
+Lag;Ref;4
+.{224}
+
+bin 105
+Lag;Ref;5
+.{225}
+
+bin 106
+Lag;Ref;6
+.{226}
+
+bin 107
+Lag;Ref;7
+.{227}
+
+bin 108
+Lag;Ref;8
+.{228}
+
+bin 109
+Lag;Ref;9
+.{229}
+
+bin 110
+Lag;Ref;10
+.{230}
+
+bin 111
+Lag;Ref;11
+.{231}
+
+bin 112
+Lag;Ref;12
+.{232}
+
+bin 113
+Lag;Ref;13
+.{233}
+
+bin 114
+Lag;Ref;14
+.{234}
+
+bin 115
+Lag;Ref;15
+.{235}
+
+bin 116
+Lag;Ref;16
+.{236}
+
+bin 117
+Lag;Ref;17
+.{237}
+
+bin 118
+Lag;Ref;18
+.{238}
+
+bin 119
+Lag;Ref;19
+.{239}
+
+bin 120
+Lag;Ref;20
+.{240}

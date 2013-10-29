@@ -1,0 +1,7 @@
+b50=b44+b45 label Lead+Lag
+b51=(b46+b48)/2 label Suppressed
+b52=(b47+b49)/2 label Not-Suppressed
+b53=(b46-b47) label Lead/Ape(S-NS)
+b54=(b48-b49) label Lag/Ape(S-NS)
+b55=(b53+b54)/2 label S-NS
+b56=b41-b42 label Lead/Ape - Lag/Ape

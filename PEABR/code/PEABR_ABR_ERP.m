@@ -1,0 +1,93 @@
+function [results]=PEABR_ABR_ERP(args)
+%% DESCRIPTION:
+%
+% INPUTS:
+%
+%   args.BINLIST
+%
+%   args.Epoch
+%
+%   args.Baseline
+%
+%   args.threshold
+%
+%   args.FilterFile
+%
+%   args.ERPFilename
+%
+%   args.ERPName
+%
+%   args.typef
+%  
+%   args.BINOPS
+%
+%   args.mainfield: overwrite event fields
+%
+% OUTPUTS:
+%
+% Bishop, Chris Miller Lab 2011
+
+%% START EEG LAB
+global EEG;
+
+if ~isfield(args, 'mainfield') || isempty(args.mainfield), args.mainfield='binlabel'; end
+
+% try 
+    %% ERPLAB: Filter EEG
+    
+    % Filter manually
+    %   Note that filtfilt doesn't work with an IIR. Have to do something a
+    %   little cleverer 
+    %   See Link below for details.
+    %   http://www.mathworks.com/support/solutions/en/data/1-BJ2YFF/index.html?product=SG&solution=1-BJ2YFF
+    load(args.FilterFile, 'Hd');     
+    for c=1:size(EEG.data,1)
+        EEG.data(c,:)=filter(Hd, EEG.data(c,:)); % filter with filter/
+        EEG.data(c,:)=filter(Hd, fliplr(EEG.data(c,:))); % reverse and filter again
+    end % c
+    clear Hd; 
+
+
+    %% ERPLAB: Create Event List
+    EEG = pop_creabasiceventlist(EEG, '', {'boundary'}, {-99});
+%     EEG = eeg_checkset( EEG );
+
+    %% ERPLAB: BINLISTER
+    EEG = pop_binlister( EEG, args.BINLIST, 'no', '', 0, [], [], 0, 0, 0);
+%     EEG = eeg_checkset( EEG );
+
+    %% TRANSFER BINS TO EEG
+    EEG = pop_overwritevent(EEG, args.mainfield); 
+    
+    %% ERPLAB: Epoch and Baseline Correct Data
+    EEG = pop_epochbin( EEG , [args.Epoch(1)  args.Epoch(2)],  [args.Baseline(1) args.Baseline(2)]);
+%     EEG = eeg_checkset( EEG );
+
+    %% ERPLAB: Artifact Rejection (Simple Threshold)
+%     EEG = pop_artextval( EEG, [args.Epoch(1) args.Epoch(2)], [args.threshold(1) args.threshold(2)],  args.chanArray, 8);
+    EEG = pop_artextval( EEG, [args.artTwin(1) args.artTwin(2)], [args.threshold(1) args.threshold(2)],  args.chanArray, 8);
+%     EEG = eeg_checkset( EEG );
+
+    %% ADD IN ADDITIONAL REJECTION CRITERIA!
+    %   For instance, rejecting additional trials rejected in a different
+    %   EEG dataset. 
+    if isfield(args, 'EEGREJ_filename') && ~isempty(args.EEGREJ_filename)
+        EEGREJ=pop_loadset('filename', args.EEGREJ_filename, 'filepath', args.EEGREJ_filepath, 'loadmode', 'all');        
+        EEG=MSPE_RejectBlinks(EEG, EEGREJ); 
+    end % 
+   
+    %% ERPLAB: Compute Average ERPs
+    ERP = pop_averager(EEG,1, args.artcrite, args.iswavg, args.stdev);
+
+    %% BIN OPERATIONS
+    if isfield(args, 'BINOPS') && ~isempty(args.BINOPS)
+        ERP = pop_binoperator(ERP, args.BINOPS);
+    end % exist
+    
+    %% Name
+    ERP.erpname=args.ERPName;
+    
+    %% ERPLAB: Save ERP set
+    save(args.ERPFilename, 'ERP');
+    
+    results='done';

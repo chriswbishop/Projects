@@ -1,0 +1,6 @@
+b30=b11-b12 label (L)Ape(S-NS)             
+b31=b15-b16 label (L)ApeVLead(S-NS)        
+b32=(b15-b16)-(b11-b12) label (L)Interaction
+b33=b3-b5 label (L)ApeVLead-(L)Flash              
+b34=b15-b5 label (L)ApeVLead(S)-(L)Flash          
+b35=b16-b5 label (L)ApeVLead(NS)-(L)Flash

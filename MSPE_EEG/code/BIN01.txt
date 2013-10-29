@@ -1,0 +1,115 @@
+bin 1
+(L)Ape
+.{12}
+
+bin 2
+(R)Ape
+.{21}
+
+bin 3
+(L)ApeVLead
+.{130}
+
+bin 4
+(R)ApeVLead
+.{65}
+
+bin 5
+(L)Flash
+.{128}
+
+bin 6
+(R)Flash
+.{64}
+
+bin 7
+Blank
+.{15}
+
+bin 8
+(L)A
+.{7}
+
+bin 9
+(R)A
+.{8}
+
+bin 10
+Button Press
+.{1-5}
+
+bin 11
+(L)Ape(S)
+.{12}{t<800-2100>1}
+
+bin 12
+(L)Ape(NS)
+.{12}{t<800-2100>2}
+
+bin 13
+(R)Ape(S)
+.{21}{t<800-2100>1}
+
+bin 14
+(R)Ape(NS)
+.{21}{t<800-2100>2}
+
+bin 15
+(L)ApeVLead(S)
+.{130}{t<800-2100>1}
+
+bin 16
+(L)ApeVLead(NS)
+.{130}{t<800-2100>2}
+
+bin 17
+(R)ApeVLead(S)
+.{65}{t<800-2100>1}
+
+bin 18
+(R)ApeVLead(NS)
+.{65}{t<800-2100>2}
+
+bin 19
+Ape
+.{12;21}
+
+bin 20
+Ape(S)
+.{12;21}{t<800-2100>1}
+
+bin 21
+Ape(NS)
+.{12;21}{t<800-2100>2}
+
+bin 22
+ApeVLead
+.{65;130}
+
+bin 23
+ApeVLead(S)
+.{65;130}{t<800-2100>1}
+
+bin 24
+ApeVLead(NS)
+.{65;130}{t<800-2100>2}
+
+bin 25
+A
+.{7-8}
+
+bin 26
+Flash
+.{64;128}
+
+bin 27
+(L)Double
+.{9}
+
+bin 28
+(R)Double
+.{10}
+
+bin 29
+Double
+.{9;10}

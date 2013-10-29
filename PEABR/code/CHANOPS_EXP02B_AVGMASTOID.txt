@@ -1,0 +1,10 @@
+ch1=ch1-(0.5*ch7+0.5*ch8) label A1-AVGM
+ch2=ch2-(0.5*ch7+0.5*ch8) label A2-AVGM
+ch3=ch3-(0.5*ch7+0.5*ch8) label A3-AVGM
+ch4=ch4-(0.5*ch7+0.5*ch8) label A4-AVGM
+ch5=ch5-(0.5*ch7+0.5*ch8) label A5-AVGM
+ch6=ch6-(0.5*ch7+0.5*ch8) label A6-AVGM
+ch7=ch7-(0.5*ch7+0.5*ch8) label LM-AVGM
+ch8=ch8-(0.5*ch7+0.5*ch8) label RM-AVGM
+ch9=ch9-(0.5*ch7+0.5*ch8) label LE-AVGM
+ch10=ch10-(0.5*ch7+0.5*ch8) label RE-AVGM
