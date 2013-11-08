@@ -1,12 +1,12 @@
 function jobs = FFR_gab_setup(sid, EXPID)
 %% DESCIRPTION
 %
-%   General setup file for Study 26 ()
+%   General setup file for FFR-Clinard study.
 %
 % INPUT:
 %   
 %   sid:    char array, each row is a subject ID
-%   EXPID:    
+%   EXPID:  
 %
 % OUTPUT:
 %
@@ -14,8 +14,7 @@ function jobs = FFR_gab_setup(sid, EXPID)
 %
 % Bishop, Chris Miller Lab 2010
 
-studyDir=['/home/cwbishop/projects/MSPE/' EXPID '/'];
-% studyDir=['/home/cwbishop/projects/MSPE/'];
+studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
 
 jobs={};
 for s=1:size(sid,1)
@@ -24,35 +23,28 @@ for s=1:size(sid,1)
     subDir=fullfile(studyDir,SID);
     
 %% BUILD DEFAULT JOBS
-    
-%% UNPACK (unpack)
+
+%% PACKAGE DATA
 %
-%   This job moves data from a zipped tarball (.tgz) file into the
-%   specified directories.  Files with specific extensions are moved to
-%   specific folders.  For instance, *.bdf files will be moved to the
-%   'eeg' directory for that subject, while *.log files will be moved
-%   to the 'behavior' directory, etc.  
-    unpack=gab_emptyjob;
-    unpack.jobName='unpack';
-    unpack.jobDir=fullfile(subDir, 'jobs');
-    unpack.task{end+1}=struct(...
-        'func',@gab_task_unpack,...
-        'args',struct(...
-            'source',fullfile(studyDir,'sandbox',[SID '.tgz']),...
-            'destination',{{fullfile(subDir, 'eeg'), fullfile(subDir,'behavior'), fullfile(subDir, 'eyetracking')}},...
-            'filter',{{['*' SID '*.bdf'], ['*' SID '*.log'], [SID '*.edf']}}, ...
-            'directories', {{fullfile(subDir, 'eeg'), fullfile(subDir,'behavior'), fullfile(subDir, 'eyetracking')}}));
+%   Package data into tgz file format??
+
+%% MOVE/COPY Files
+%
+%   I don't care for the *.tgz approach we used previously, so it would be
+%   great to have a function that allows me to 
     
 %% PREPROCESSING (preproc)
 %
-%   This job does some basic prerpocessing including importing data
+%   This job does some basic preprocessing including importing data
 %   into EEGLAB, merging files (if necessary), high-pass filtering the
-%   data, loading electrode locations, etc.  It requires that the
-%   'unpack' job be complete before it will successfully execute. 
+%   data, loading electrode locations, etc. 
+%
+%   Removed job dependencies for now, will need to add them back in once I
+%   decide on a data format that's easy to use. 
     preproc=gab_emptyjob;
     preproc.jobName='preproc';
     preproc.jobDir=fullfile(subDir, 'jobs');
-    preproc.parent={fullfile(unpack.jobDir,[unpack.jobName '.mat'])};
+    preproc.parent={};
     
     % Load environmental variables
     preproc.task{end+1}=struct(...
@@ -61,9 +53,9 @@ for s=1:size(sid,1)
     
     % Read File
     preproc.task{end+1}=struct(...
-        'func',@gab_task_eeg_loadbdf,...
+        'func',@gab_task_eeglab_loadcnt,...
         'args',struct(...
-            'file',fullfile(subDir, 'eeg', [SID '-MSPE.bdf']),...
+            'files',{{fullfile(subDir, 'eeg', [SID 'fullfile(subDir, 'eeg', [SID '-MSPE.bdf'])}},...
             'ref',1:64,... % Reference all electroes to all but EOG electrodes
             'chans',1:64)); % Load 64 + 4 EOG
 
