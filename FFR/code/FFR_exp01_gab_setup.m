@@ -81,7 +81,8 @@ for s=1:size(sid,1)
     for j=1:length(stimtype)
         for i=1:nruns
             fnames{end+1}=fullfile(subDir, 'eeg', [SID '-' EXPID '-' stimtype{j} '-0' num2str(i) '.cnt']);
-            memmapnames{end+1}=fullfile(subDir, 'eeg', [SID '-' EXPID '-' stimtype{j} '-0' num2str(i) '.fdt']);
+%             memmapnames{end+1}=fullfile(subDir, 'eeg', [SID '-' EXPID '-' stimtype{j} '-0' num2str(i) '.fdt']);
+            memmapnames{end+1}=''; % no memory mapping
         end % j=1:length...
     end % i=1:3
     
@@ -101,12 +102,34 @@ for s=1:size(sid,1)
             'params', ...
                 {{'Filter', 'bandpass', ...
                 'Design', 'butter', ...
-                'Cutoff', [0.1 30], ...
+                'Cutoff', [0.1 40], ...
                 'Order', 4, ...
                 'RemoveDC', 'on', ...
                 'Boundary', 'boundary'}}));  
-            
-    % Create Eventlists for all Datasets
+    
+%     % Epoch data
+%     %   In order to keep file size down, we need to epoch the data early,
+%     %   especially for this project which will have larger than average
+%     %   file sizes.
+%     %
+%     % Optional inputs:
+%     %   'eventindices'- [integer vector] Extract data epochs time locked to the 
+%     %                indexed event numbers. 
+%     %   'valuelim' - [min max] or [max]. Lower and upper bound latencies for 
+%     %                trial data. Else if one positive value is given, use its 
+%     %                negative as the lower bound. The given values are also 
+%     %                considered outliers (min max) {default: none}
+%     %   'verbose'  - ['yes'|'no'] {default: 'yes'}
+%     %   'newname'  - [string] New dataset name {default: "[old_dataset] epochs"}
+%     %   'epochinfo'- ['yes'|'no'] Propagate event information into the new
+%     %                epoch structure {default: 'yes'}
+%     ERP.task{end+1}=struct(...
+%         'func', @gab_task_eeglab_pop_epoch, ...
+%         'args', struct(...
+%             'events', [], ... % epoch all events; otherwise, ['10 11 12']
+%             'lim', [-0.11 1.1], ... % generous epochs to begin with.
+%             'params', {{'epochinfo', 'yes'}})); % Optional parameter inputs
+      % Create Eventlists for all Datasets
         %    'Eventlist'             - name (and path) of eventlist text file to export.
         %    'BoundaryString'        - boundary string code to be converted into a numeric code.
         %    'BoundaryNumeric'           - numeric code that boundary string code is to be converted to
@@ -156,7 +179,7 @@ for s=1:size(sid,1)
                'Forbidden', [], ... % might need to add in a [6] since there's a random even at the beginning of all files
                'Ignore', [], ... % actually, this might be where the 6 should go
                'Warning', 'off', ...
-               'SendEL2', 'EEG', ...
+               'SendEL2', 'EEG', ... 
                'Report', 'on', ...
                'Saveas', 'off'}}));
     
@@ -164,8 +187,8 @@ for s=1:size(sid,1)
     ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_overwritevent, ...
         'args', struct(...
-            'mainfield', 'code'));
-    
+            'mainfield', 'binlabel')); % label 'type' with human readable BIN information
+        
     % EPOCH DATA
     % trange    - window for epoching in msec
     % blc       - window for baseline correction in msec or either a string like 'pre', 'post', or 'all'
@@ -173,14 +196,14 @@ for s=1:size(sid,1)
     ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_epochbin,...
         'args', struct(...
-            'trange', [-100 300], ... % use short time range for testing. 
-            'blc', 'pre')); % baseline based on pre-stimulus onset.
+            'trange', [-100 1000], ... % use short time range for testing. 
+            'blc', 'pre')); % baseline based on pre-stimulus onset.   
         
     % Merge datasets
     ERP.task{end+1}=struct(...
         'func', @gab_task_eeg_mergeset, ...
-        'args', '');   
-    
+        'args', '');         
+        
     % Save merged dataset
     %   'filename' - [string] name of the file to save to
     %   'filepath' - [string] path of the file to save to
@@ -242,30 +265,52 @@ for s=1:size(sid,1)
                 'gui', 'none', ...
                 'Warning', 'off'}}));
     
-    %% FFR JOB
-    %   Nearly identical to ERP job, except with a different passband
-    FFR=ERP; 
-    FFR.jobName='FFR';
-    
-    % Change filtering parameters; all else held constant.
-    FFR.task{3}=CHANGE_PARAMS(FFR.task{3}, {'Cutoff', [100 3000], 'Order', 4});
+%     %% FFR JOB
+%     %   Nearly identical to ERP job, except with a different passband
+%     FFR=ERP; 
+%     FFR.jobName='FFR';
+%     
+%     % Change filtering parameters; all else held constant.
+%     FFR.task{3}=CHANGE_PARAMS(FFR.task{3}, {'Cutoff', [100 3000], 'Order', 4});
+%     
+%     % Change epoched time window
+% %     FFR.task{7}=CHANGE_PARAMS(FFR.task{7}, {'trange', [-100 1000]});
+%     FFR.task{7}.args.trange=[-100 1000];
+%     
+%     % Change saved dataset name
+%     FFR.task{9}=CHANGE_PARAMS(FFR.task{11}, {'filename', [SID '-FFR.set']}); 
+%     
+%     % Change saved ERP information
+%     FFR.task{11}=CHANGE_PARAMS(FFR.task{13}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
+%     
+    %% UNFILTERED (RAW) DATA
+    %   Create event related time average without any filtering. I was
+    %   having significant trouble getting a solid FFR (1000 Hz) from the
+    %   data so I'd like to rule out any effects of filtering.
+    RAW=ERP;
+    RAW.jobName='RAW';
     
     % Change epoched time window
-%     FFR.task{7}=CHANGE_PARAMS(FFR.task{7}, {'trange', [-100 1000]});
-    FFR.task{7}.args.trange=[-100 1000];
+    %   Same analysis window.
+%     RAW.task{7}.args.trange=[-100 1000];
     
     % Change saved dataset name
-    FFR.task{9}=CHANGE_PARAMS(FFR.task{9}, {'filename', [SID '-FFR.set']}); 
+    RAW.task{9}=CHANGE_PARAMS(RAW.task{9}, {'filename', [SID '-RAW.set']}); 
     
     % Change saved ERP information
-    FFR.task{11}=CHANGE_PARAMS(FFR.task{11}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
+    RAW.task{11}=CHANGE_PARAMS(RAW.task{11}, {'erpname', [SID '-RAW'], 'filename', [SID '-RAW.mat']}); 
     
-    %% STEADY STATE JOB
-    %   Under development
+    % Remove filtering task
+    %   No additional, offline filtering applied in this job.
+    RAW=gab_remove_task(RAW, 3); 
+  
+%     %% STEADY STATE JOB
+%     %   Under development
     
     % PUT JOBS TOGETHER
-    jobs{end+1}=ERP; 
-%     jobs{end+1}=FFR;    
+%     jobs{end+1}=ERP; 
+%     jobs{end+1}=FFR;
+    jobs{end+1}=RAW; 
     
 end % s
 
