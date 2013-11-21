@@ -1,8 +1,8 @@
 function RP=AA02_Paradigm(DATATYPE, CIRCUIT)
 %% DESCRIPTION:
 %
-%   Paradigm for Project AA Experiment 02. ALL inputs are optional, except
-%   for the subject ID.
+%   Paradigm for Project AA Experiment 02. DATATYPE is the only required
+%   input.
 %
 % INPUT:
 %
@@ -80,6 +80,11 @@ if DATATYPE==0
 elseif DATATYPE==1
     DATA=make_AM_FDL_tones_2freq_4FFR(FS, 1000, 985, false, false, 20, 2, false);
     TCODES=[2 8];
+elseif DATATYPE==-1
+    % Testing purposes
+    %   Ironically, not tested yet.
+    DATA=sin_gen(1000, 1, FS, 0);
+    TCODES=[255 255];
 else
     error('Invalid data type selected');
 end % if 
