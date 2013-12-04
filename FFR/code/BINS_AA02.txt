@@ -1,0 +1,15 @@
+bin 1
+SAM Begin
+.{2}
+
+bin 2
+SAM Middle
+.{8}
+
+bin 3
+NoAM Begin
+.{4}
+
+bin 4
+NoAM Middle
+.{16}

@@ -1,4 +1,4 @@
-function jobs = FFR_exp01_gab_setup(sid)
+function jobs = FFR_exp01_gab_setup(sid, EXPID)
 %% DESCIRPTION
 %
 %   General setup file for FFR-Clinard study.
@@ -13,7 +13,7 @@ function jobs = FFR_exp01_gab_setup(sid)
 %   jobs:   job structure for use with GAB
 %
 % Bishop, Chris Miller Lab 2010
-EXPID='Exp01';
+
 studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
 
 jobs={};
@@ -56,14 +56,23 @@ for s=1:size(sid,1)
 %   
     switch SID      
         case {'CB'}
+            % AA01
             nruns=3;
         case {'KM'}
+            % AA01
+            %
             % KM only has two files, need to truncate
             % eliminate any file with a '03' in it. This is a bit more
             % flexible in case I change something later.
             nruns=2;
-    end % switch
-
+        case {'CM'}
+            % From AA02
+            nruns=3;
+        case {'EE'}
+            % From AA02
+            nruns=2; 
+    end % switch       
+    
     ERP=gab_emptyjob;
     ERP.jobName='ERP';
     ERP.jobDir=fullfile(subDir, 'jobs');
@@ -174,7 +183,7 @@ for s=1:size(sid,1)
     ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_binlister, ...
         'args', struct( ...
-            'params', {{'BDF', fullfile(studyDir, '..', 'code', 'BINS_EXP01.txt'), ...
+            'params', {{'BDF', fullfile(studyDir, '..', 'code', ['BINS_' EXPID '.txt']), ...
                'Resetflag', 'off', ... % don't reset artifact rejection flags
                'Forbidden', [], ... % might need to add in a [6] since there's a random even at the beginning of all files
                'Ignore', [], ... % actually, this might be where the 6 should go
