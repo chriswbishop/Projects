@@ -39,9 +39,6 @@ FOUT=[];
 AOUT=[]; 
 POUT=[];
 
-%% PLOT COLORS
-[colorDef, styleDef]=erplab_linespec(max(BINS)); 
-
 % PRE-STIM FFT STUFF
 pY=[];
 pA=[]; % One sided amplitude data
@@ -66,6 +63,9 @@ for s=1:length(ERPF)
     if ~exist('BINS', 'var') || isempty(BINS)
         BINS=1:size(ERP.bindata,3); 
     end % if ~exist('BINS ...
+    
+    %% GET LINE SPECS
+    [colorDef, styleDef]=erplab_linespec(max(BINS));
     
     %% EXTRACT PARAMETERS
     LABELS={ERP.bindescr{BINS}}; % bin description labels
