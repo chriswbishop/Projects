@@ -1,4 +1,4 @@
-function [FOUT, AOUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS)
+function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS, PLOTPHASE)
 %% DESCRIPTION:
 %
 %   Basic function to compute an FFT based on ERP data structure for AA02
@@ -12,6 +12,7 @@ function [FOUT, AOUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS)
 %   NSEM:   integer, number of SEMs to include in error bars (default=0)
 %   BINS:   integer index, BINS to include in the analysis
 %   TFREQS: double array, test frequencies to return amplitude values at.
+%   PLOTPHASE:  bool, flag to generate phase plots at TFREQS
 %
 % OUTPUT:
 %
@@ -20,7 +21,9 @@ function [FOUT, AOUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS)
 %           of frequencies specified in TFREQS (and FOUT), B is the number
 %           of BINS specified in the BINS array, and S is the number of
 %           subjects.
-%   LABELS: cell array, bin labels
+%   LABELS: cell array, bin labels from ERP.bindescr field.
+%   POUT:   phase angles for target frequencies (TFREQS). Angles are in
+%           radians. Use 'polar.m' to visualize.
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -34,6 +37,7 @@ if ~exist('TFREQS', 'var'), TFREQS=[]; end % empty by default
 %% OUTPUTS
 FOUT=[];
 AOUT=[]; 
+POUT=[];
 
 % PRE-STIM FFT STUFF
 pY=[];
@@ -107,7 +111,8 @@ for s=1:length(ERPF)
             else
                 % Grab amplitude value
                 FOUT(z)=f(ind); 
-                AOUT(z,i,s)=A(ind,i,s); 
+                AOUT(z,i,s)=A(ind,i,s);
+                POUT(z,i,s)=P(ind,i,s); % return phase information
             end % if isempty(TFREQS)
             
         end % for z=1 ...
@@ -137,7 +142,7 @@ for s=1:length(ERPF)
     
 end % for s=1:size(SID,1)
 
-%% PLOT ACROSS SUBJECT MEAN
+%% PLOT ACROSS SUBJECT MEAN (Amplitude)
 %   Plot as long as Plot LEVel is >0. 
 if PLEV>0
     % Figure
@@ -182,3 +187,10 @@ if PLEV>0
     end %
     
 end % if PLEV>0
+
+%% PLOT PHASE INFORMATION
+%   Generate polar plots to look at phase information across subjects
+%   within a specific frequency. 
+if ~isempty(TFREQS) && PLOTPHASE
+    
+end % ~isempty(TFREQS) && PLOTPHASE
