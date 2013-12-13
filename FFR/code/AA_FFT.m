@@ -39,6 +39,9 @@ FOUT=[];
 AOUT=[]; 
 POUT=[];
 
+%% PLOT COLORS
+[colorDef, styleDef]=erplab_linespec(max(BINS)); 
+
 % PRE-STIM FFT STUFF
 pY=[];
 pA=[]; % One sided amplitude data
@@ -120,24 +123,27 @@ for s=1:length(ERPF)
     
     %% PLOT SUBJECT DATA
     %   Only plot if user specifies this level of detail
-    if PLEV==2
-        figure, hold on
-        % plot pre-stim data
-    %     plot(pf, squeeze(pA(:,:,s)), '--', 'linewidth', 1);
-    
-        % plot post-stim data
-        plot(f, squeeze(A(:,:,s)), '-', 'linewidth', 2);
-        title('Single-Sided Amplitude Spectrum of y(t)')
-        xlabel('Frequency (Hz)')
-        ylabel('|Y(f)| (uV)')    
-        legend(LABELS, 'Location', 'Best'); 
-        title([ERP.erpname ' | Bins: [' num2str(BINS) ']']); % set ERPNAME as title
-    
-        % Set domain if user specifies it
-        if exist('FRANGE', 'var')
-            xlim(FRANGE);
-        end %
-    end % if PLEV==2
+    %   If you'd like to plot individual subject data, call this function
+    %   with a single ERPF field populated. That way all the plotting ends
+    %   up being the same no matter how many subjects are used. 
+%     if PLEV==2
+%         figure, hold on
+%         % plot pre-stim data
+%     %     plot(pf, squeeze(pA(:,:,s)), '--', 'linewidth', 1);
+%     
+%         % plot post-stim data
+%         plot(f, squeeze(A(:,:,s)), '-', 'linewidth', 2);
+%         title('Single-Sided Amplitude Spectrum of y(t)')
+%         xlabel('Frequency (Hz)')
+%         ylabel('|Y(f)| (uV)')    
+%         legend(LABELS, 'Location', 'Best'); 
+%         title([ERP.erpname ' | Bins: [' num2str(BINS) ']']); % set ERPNAME as title
+%     
+%         % Set domain if user specifies it
+%         if exist('FRANGE', 'var')
+%             xlim(FRANGE);
+%         end %
+%     end % if PLEV==2
     
     
 end % for s=1:size(SID,1)
@@ -148,13 +154,10 @@ if PLEV>0
     % Figure
     figure, hold on
     
-    % Get color and style defs for each bin
-    [colorDef, styleDef]=erplab_linespec(size(A,2)); 
-        
     %% PLOT SEM
     %   Plotted first for ease of legend labeling. Yes, I know I'm looping
     %   through the data twice. Yes, it is inefficient. No, I don't care. 
-    for i=1:size(A,2) % for each bin we are plotting
+    for i=1:length(BINS) % for each bin we are plotting
         
         tdata=squeeze(A(:,i,:)); 
         
@@ -165,15 +168,15 @@ if PLEV>0
             % Compute +/-NSEM SEM
             U=mean(tdata,2) + std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
             L=mean(tdata,2) - std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
-            ciplot(L, U, f, colorDef{i}, 0.15); 
+            ciplot(L, U, f, colorDef{BINS(i)}, 0.15); 
             
         end % if ~NSEM~=0
         
     end % for i=1:size(A,2)    
         
-    for i=1:size(A,2) % for each bin we are plotting        
+    for i=1:length(BINS) % for each bin we are plotting        
         tdata=mean(squeeze(A(:,i,:)),2); 
-        plot(f, tdata, 'Color', colorDef{i}, 'LineStyle', styleDef{i}, 'linewidth', 1.5);
+        plot(f, tdata, 'Color', colorDef{BINS(i)}, 'LineStyle', styleDef{BINS(i)}, 'linewidth', 1.5);
     end % for i=1:size(A,2)
     
     xlabel('Frequency (Hz)')
@@ -190,7 +193,41 @@ end % if PLEV>0
 
 %% PLOT PHASE INFORMATION
 %   Generate polar plots to look at phase information across subjects
-%   within a specific frequency. 
-if ~isempty(TFREQS) && PLOTPHASE
+%   within specified frequencies.
+if ~isempty(TFREQS) && PLOTPHASE && PLEV>0
+    
+    %% GENERATE FIGURE WITH SUBPLOTS, ONE FOR EACH SPECIFIED FREQUENCY
+    %
+    %   Subplots ended up being too crowded and complex, so went with
+    %   something simpler for now. Maybe return to this later.
+    
+       
+    % Loop through all specified frequencies        
+    for z=1:size(POUT,1)
+        
+        % Open a new figure
+        figure
+                
+        for b=1:length(BINS)
+            
+            % Get data
+            t=squeeze(POUT(z,b,:));
+            
+            % Make polar plot with unit radius
+            %   Gives an intuitive feel for the phase variance across
+            %   listeners            
+            polar(t, ones(size(t)), 'o');
+            hold on;
+            % Get children (data points)
+            h=get(gca, 'Children'); 
+            set(h(1), 'MarkerEdgeColor', colorDef{BINS(b)}, 'MarkerFaceColor', colorDef{BINS(b)}, 'MarkerSize', 10);                        
+                        
+        end % b
+        
+        % Markup Figure
+        title([num2str(TFREQS(z)) ' Hz | Bins: [' num2str(BINS) ']']);
+        legend(LABELS, 'Location', 'northeastoutside'); 
+        
+    end % i=1:length(TFREQS)
     
 end % ~isempty(TFREQS) && PLOTPHASE
