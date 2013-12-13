@@ -319,7 +319,7 @@ for s=1:size(sid,1)
 %     %   Under development
     
     % PUT JOBS TOGETHER
-%     jobs{end+1}=ERP; 
+    jobs{end+1}=ERP; 
 %     jobs{end+1}=FFR;
     jobs{end+1}=RAW; 
     
