@@ -1,7 +1,10 @@
 function jobs = AA02_gab_setup(sid, EXPID)
 %% DESCIRPTION
 %
-%   General setup file for FFR-Clinard study.
+%   General setup file for AA02.
+%
+%   Note that this should not be used to analyze AA01 data unless you want
+%   to see a massive rejection rate.
 %
 % INPUT:
 %   
@@ -14,7 +17,7 @@ function jobs = AA02_gab_setup(sid, EXPID)
 %
 % Bishop, Chris Miller Lab 2010
 if ~exist('EXPID', 'var') || isempty(EXPID), EXPID='AA02'; end
-if ~strcmp('AA02', EXPID), error('Wrong setup file, dude!'); end
+if ~strcmp('AA02', EXPID), error('Wrong setup file??'); end
 
 studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
 
@@ -25,10 +28,10 @@ for s=1:size(sid,1)
     subDir=fullfile(studyDir,SID);
     
     switch SID      
-        case {'CM'}
+        case {'CM'} 
             % From AA02
             nruns=3;
-        case {'EE'}
+        case {'EE' } 
             % From AA02
             nruns=2; 
     end % switch       
@@ -278,8 +281,8 @@ for s=1:size(sid,1)
     FFR.task{12}=CHANGE_PARAMS(FFR.task{12}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
     
     % PUT JOBS TOGETHER
-    jobs{end+1}=ERP; 
-    jobs{end+1}=FFR;
+%     jobs{end+1}=ERP; 
+%     jobs{end+1}=FFR;
     jobs{end+1}=RAW; 
     
 end % s

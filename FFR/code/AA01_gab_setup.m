@@ -1,4 +1,4 @@
-function jobs = FFR_exp01_gab_setup(sid, EXPID)
+function jobs = AA01_gab_setup(sid, EXPID)
 %% DESCIRPTION
 %
 %   General setup file for FFR-Clinard study.
@@ -13,6 +13,8 @@ function jobs = FFR_exp01_gab_setup(sid, EXPID)
 %   jobs:   job structure for use with GAB
 %
 % Bishop, Chris Miller Lab 2010
+if ~exist('EXPID', 'var') || isempty(EXPID), EXPID='Exp01'; end
+if ~strcmp('Exp01', EXPID), error('Wrong setup file??'); end
 
 studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
 
