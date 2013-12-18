@@ -100,7 +100,7 @@ for s=1:length(ERPF)
     
     %% GET SAMPLING RATE
     FS=EEG.srate;
-    
+   
     %% LOOP THROUGH BINS    
     for b=1:length(BINS)        
         
@@ -108,7 +108,7 @@ for s=1:length(ERPF)
         %   Assumes that ERPLAB copied the EVENTLIST back to EEG structure
         %   at some point.
         LABELS{b}=EEG.EVENTLIST.bdf(b).description;
-        
+                
         %% CREATE TIME MASK
         %   Only look at post stimulus period, ignore all prestim stuff.
         TMASK=find(EEG.times>=0, 1, 'first'):length(EEG.times); % post-stim mask.
@@ -127,6 +127,9 @@ for s=1:length(ERPF)
         
         %% COMPUTE PLVs FOR EACH CHANNEL AND SWEEP
         for c=1:size(SWEEPS,1)
+            
+             %% GET CHANNEL LABEL
+            CLABELS{c}=EEG.chanlocs(c).labels;
             
             %% FFT VARIABLES
             L=size(SWEEPS,2);
@@ -180,8 +183,8 @@ for s=1:length(ERPF)
             %   is wrong. Quick sanity check just in case something wonky
             %   happens in the future.
             if ~isempty(find(PLV(c,:,b,s)<0 | PLV(c,:,b,s)>1, 1))
-                error('AA_phasecoher:PhaseOutofRange', ...
-                    'Vector length is outside the expected range.');
+                error('AA_phasecoher:PLVOutofRange', ...
+                    'PLV is outside the expected range.');
             end % ~isempty(find( ...
             
             %% GET Target FREQuencies (TFREQS)
@@ -265,17 +268,18 @@ if PLEV>0
             plot(f, tdata, 'Color', colorDef{BINS(b)}, 'LineStyle', styleDef{BINS(b)}, 'linewidth', 1.5);
             
         end % b=1:size(PLV,3)
+        
+        %% MARKUP FIGURE
+        xlabel('Frequency (Hz)')
+        ylabel('PLV')
+        legend(LABELS, 'Location', 'Best'); 
+        title(['CHAN=' num2str(c) '(' CLABELS{c} ') | N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']); 
+        ylim([0 1]); % set y limits so it's easier to compare across subjects later.
+        
+        % Set domain if user specifies it
+        if exist('FRANGE', 'var') && ~isempty(FRANGE)
+            xlim(FRANGE);
+        end %
     end % c=1:size(PLV,1)
-    
-    %% MARKUP FIGURE
-    xlabel('Frequency (Hz)')
-    ylabel('PLV')
-    legend(LABELS, 'Location', 'Best'); 
-    title(['N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']); 
-
-    % Set domain if user specifies it
-    if exist('FRANGE', 'var') && ~isempty(FRANGE)
-        xlim(FRANGE);
-    end %
     
 end % if PLEV>0
