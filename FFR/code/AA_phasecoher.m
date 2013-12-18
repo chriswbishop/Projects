@@ -179,7 +179,7 @@ for s=1:length(ERPF)
             %   PLVs should range from [0 1]. If they don't, then something
             %   is wrong. Quick sanity check just in case something wonky
             %   happens in the future.
-            if ~isempty(find(PLV(c,:,b,s)<0 || PLV(c,:,b,s)>1, 1))
+            if ~isempty(find(PLV(c,:,b,s)<0 | PLV(c,:,b,s)>1, 1))
                 error('AA_phasecoher:PhaseOutofRange', ...
                     'Vector length is outside the expected range.');
             end % ~isempty(find( ...
