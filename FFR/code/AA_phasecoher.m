@@ -1,4 +1,4 @@
-function [PLV]=AA_phasecoher(ERPF, FRANGE, CHANS, NSEM, BINS, PLEV, TFREQS)
+function [PLV, FOUT, PLVOUT]=AA_phasecoher(ERPF, FRANGE, CHANS, NSEM, BINS, PLEV, TFREQS)
 %% DESCRIPTION:%
 %
 %   Extract data and compute phase coherence values within and across
@@ -25,6 +25,17 @@ function [PLV]=AA_phasecoher(ERPF, FRANGE, CHANS, NSEM, BINS, PLEV, TFREQS)
 %
 % OUTPUT:
 %
+%
+% NOTE: Keep in mind the PLVs are biased by the number of trials used to
+%       estimate them: PLVs tend to be larger with low trial numbers. So
+%       comparing across subjects/conditions is a non-trivial issue unless
+%       a corrective factor is applied. CWB is not aware of any validated
+%       corrective factor. One attempt does exist in the literature (see
+%       Backer, Hill, Shahin, Miller J Neurosci (2010) and Shahin et al. J
+%       Neurphysiol (2010)), but the corrective factor applied (converting
+%       to Rayleigh's Z) does not remove the trial bias effects. So this
+%       method should NOT be applied to these or any other PLV data.
+%
 % Christopher W. Bishop
 %   University of Washington 
 %   12/13
@@ -35,9 +46,11 @@ if ~exist('PLEV', 'var') || isempty(PLEV), PLEV=1; end
 if ~exist('NSEM', 'var') || isempty(NSEM), NSEM=0; end % 0 by default
 if ~exist('TFREQS', 'var'), TFREQS=[]; end % empty by default
 if ~exist('CHANS', 'var') || isempty(CHANS), CHANS=1; end % just one channel by default
+if ~exist('FRANGE', 'var'), FRANGE=[]; end 
 
 %% OUTPUTS
 FOUT=[];    % frequencies corresponding to TFREQS
+PLVOUT=[];  % PLVs for specific target frequencies. 
 PLV=[];     % Phase locking values (PLVs) for each channel, frequency, BIN, and subject.
             %   So this should be a CxFxBxS array - rather complicated, eh?
 
@@ -161,9 +174,99 @@ for s=1:length(ERPF)
             %   Divide by number of sweeps, which normalizes vector length
             %   to within [0 1]
             PLV(c,:,b,s)=(sqrt(SUMSIN.^2 + SUMCOS.^2))./size(SWEEPS,3);
+            
+            %% GET Target FREQuencies (TFREQS)
+            %   Helpful to remove specific frequencies user is interested
+            %   in for streamlined analyses later.
+            for z=1:length(TFREQS)
+                % Find index of target frequency
+                %   Look for an exact match first
+                ind=find(f==TFREQS(z));
+            
+                % Error checking - make sure we find the precise frequency. If
+                % not, throw an error.
+                %
+                % Changed to warning because there seems to be some rounding
+                % error or something (on the order of 10^-13) at some
+                % frequencies that is preventing a perfect match. So, we'll go
+                % with the 
+                if isempty(ind)
+                    tmp=abs(f-TFREQS(z));
+                    ind= (tmp==min(tmp));
+                    warning('AA_phasecoher:NoExactMatch', [num2str(TFREQS(z)) ' not found!\nClosest frequency is ' num2str(f(ind)) ' Hz. \n\nProceeding with closest frequency. \n\nSee FOUT for exact frequencies.']);                 
+                end % if isempty(ind)
+                
+                % Grab frequency and PLV
+                FOUT(z)=f(ind); 
+                PLVOUT(c,z,b,s)=PLV(c,ind,b,s); 
+            end % z=1:length(TFREQS)
         end % i=1:size(SWEEPS,1), number of channels
     end % b=1:length(BINS)
 end % s=1:length(ERPF)
 
 %% PLOTTING ROUTINES
+%   Generate plots to help visualize the data.
 
+% First, get color scheme to match ERPLAB plotting.
+[colorDef, styleDef]=erplab_linespec(max(BINS));
+
+if PLEV>0
+    
+    %% MEAN PLV vs FREQUENCY
+    %   Separate plot for each channel. Using subplot would be smarter, but
+    %   I can't figure out how to make the axes expand when I click on the
+    %   individual plots. ERPLAB does this, though, so I know it's
+    %   possible.
+    
+    % First, plot the error bars.
+    %   Yes, I know I'm looping through my data twice - it makes my life
+    %   easier in the long run. Don't judge me.
+    for c=1:size(PLV,1)        
+        % Store handle for figure.
+        h(c)=figure; 
+        hold on
+        for b=1:size(PLV,3)            
+            % Grab raw data
+            tdata=squeeze(PLV(c,:,b,:));
+            
+            % Plot standard error if user asks for it
+            %   But only if there are at least two subjects
+            if NSEM~=0 && size(tdata,2)>1
+                % Compute +/-NSEM SEM
+                U=mean(tdata,2) + std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
+                L=mean(tdata,2) - std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
+                ciplot(L, U, f, colorDef{BINS(b)}, 0.15);             
+            end % if NSEM~=0            
+        end % b=1:size(PLV,3)
+    end % c=1:size(PLV,1)
+    
+    % Second, plot the mean data
+    for c=1:size(PLV,1)
+        % Get back to the correct figure
+        figure(h(c)); 
+        for b=1:size(PLV,3)
+            
+            % Grab raw data
+            tdata=squeeze(PLV(c,:,b,:));
+            
+            % Find mean across subjects
+            tdata=mean(tdata,2);
+            
+            % Plot mean series for this channel/bin
+            plot(f, tdata, 'Color', colorDef{BINS(b)}, 'LineStyle', styleDef{BINS(b)}, 'linewidth', 1.5);
+            
+        end % b=1:size(PLV,3)
+    end % c=1:size(PLV,1)
+    
+    %% MARKUP FIGURE
+    xlabel('Frequency (Hz)')
+    ylabel('PLV')
+    legend(LABELS, 'Location', 'Best'); 
+    title(['N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']); 
+
+    % Set domain if user specifies it
+    if exist('FRANGE', 'var') && ~isempty(FRANGE)
+        xlim(FRANGE);
+    end %
+    
+end % if PLEV>0
