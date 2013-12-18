@@ -175,6 +175,15 @@ for s=1:length(ERPF)
             %   to within [0 1]
             PLV(c,:,b,s)=(sqrt(SUMSIN.^2 + SUMCOS.^2))./size(SWEEPS,3);
             
+            %% SANITY CHECK PLVs
+            %   PLVs should range from [0 1]. If they don't, then something
+            %   is wrong. Quick sanity check just in case something wonky
+            %   happens in the future.
+            if ~isempty(find(PLV(c,:,b,s)<0 || PLV(c,:,b,s)>1, 1))
+                error('AA_phasecoher:PhaseOutofRange', ...
+                    'Vector length is outside the expected range.');
+            end % ~isempty(find( ...
+            
             %% GET Target FREQuencies (TFREQS)
             %   Helpful to remove specific frequencies user is interested
             %   in for streamlined analyses later.
