@@ -98,26 +98,40 @@ for s=1:length(ERPF)
         y=DATA(TMASK,i); 
         
         Y(:,i,s)=fft(y,NFFT)/NFFT;
-        A(:,i,s)=2*abs(Y(1:NFFT/2+1,i,s)); 
-        P(:,i,s)=angle(Y(1:NFFT/2+1,i,s)); % Need to check this.  
+        
+        % Convert to one-sided amplitude spectrum and calculate phase.
+        %   See doc fft for more information
+        %   Also, the following PDF was helpful, especially in
+        %   understanding phase of positive and negative frequencies.
+        %       http://www.staff.vu.edu.au/msek/frequency%20analysis%20-%20fft.pdf        
+        A(:,i,s)=2*abs(Y(1:NFFT/2+1,i,s)); % single sided amplitude spectrum (see doc fft)
+        P(:,i,s)=angle(Y(1:NFFT/2+1,i,s)); % According to PDF listed above and previous knowledge, I think this is fine.
         
         %% GET TFREQS INFORMATION
         for z=1:length(TFREQS)
             
             % Find index of target frequency
+            %   Look for an exact match first
             ind=find(f==TFREQS(z));
             
             % Error checking - make sure we find the precise frequency. If
             % not, throw an error.
-            if isempty(TFREQS)
-                error([num2str(TFREQS(z)) ' not found!']); 
-            else
-                % Grab amplitude value
-                FOUT(z)=f(ind); 
-                AOUT(z,i,s)=A(ind,i,s);
-                POUT(z,i,s)=P(ind,i,s); % return phase information
-            end % if isempty(TFREQS)
+            %
+            % Changed to warning because there seems to be some rounding
+            % error or something (on the order of 10^-13) at some
+            % frequencies that is preventing a perfect match. So, we'll go
+            % with the 
+            if isempty(ind)
+                tmp=abs(f-TFREQS(z));
+                ind= (tmp==min(tmp));
+                warning('AA02_FFT:NoMatch', [num2str(TFREQS(z)) ' not found! Closest frequency is ' num2str(f(ind)) ' Hz. \n\nProceeding with closest frequency. \n\nSee FOUT for exact frequencies.']);                 
+            end % if isempty(ind)
             
+            % Grab amplitude value
+            FOUT(z)=f(ind); 
+            AOUT(z,i,s)=A(ind,i,s);
+            POUT(z,i,s)=P(ind,i,s); % return phase information
+                        
         end % for z=1 ...
     end % for i=1:size(DATA,3)
     
@@ -194,13 +208,12 @@ end % if PLEV>0
 %% PLOT PHASE INFORMATION
 %   Generate polar plots to look at phase information across subjects
 %   within specified frequencies.
-if ~isempty(TFREQS) && PLOTPHASE && PLEV>0
+if ~isempty(FOUT) && PLOTPHASE && PLEV>0
     
     %% GENERATE FIGURE WITH SUBPLOTS, ONE FOR EACH SPECIFIED FREQUENCY
     %
     %   Subplots ended up being too crowded and complex, so went with
-    %   something simpler for now. Maybe return to this later.
-    
+    %   something simpler for now. Maybe return to this later.   
        
     % Loop through all specified frequencies        
     for z=1:size(POUT,1)
@@ -225,7 +238,9 @@ if ~isempty(TFREQS) && PLOTPHASE && PLEV>0
         end % b
         
         % Markup Figure
-        title([num2str(TFREQS(z)) ' Hz | Bins: [' num2str(BINS) ']']);
+        %   Use FOUT instead of TFREQS because FOUT reflects the actual
+        %   frequencies used. 
+        title([num2str(FOUT(z)) ' Hz | Bins: [' num2str(BINS) ']']);
         legend(LABELS, 'Location', 'northeastoutside'); 
         
     end % i=1:length(TFREQS)
