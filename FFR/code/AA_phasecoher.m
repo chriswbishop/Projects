@@ -266,7 +266,9 @@ if PLEV>0
             
             % Plot standard error if user asks for it
             %   But only if there are at least two subjects
-            if NSEM~=0 && size(tdata,2)>1
+            %   Use size(PLV,4) instead of size(tdata,2) because the latter
+            %   doesn't work with a single subject. 
+            if NSEM~=0 && size(PLV,4)>1
                 % Compute +/-NSEM SEM
                 U=mean(tdata,2) + std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
                 L=mean(tdata,2) - std(tdata,0,2)./sqrt(size(tdata,2)).*NSEM; 
@@ -285,8 +287,11 @@ if PLEV>0
             tdata=squeeze(PLV(c,:,b,:));
             
             % Find mean across subjects
-            tdata=mean(tdata,2);
-            
+            %   Only take the mean if there are more than one subject
+            if size(PLV,4)>1
+                tdata=mean(tdata,2);                            
+            end % if size(PLV,4)>1
+                        
             % Plot mean series for this channel/bin
             plot(f, tdata, 'Color', colorDef{BINS(b)}, 'LineStyle', styleDef{BINS(b)}, 'linewidth', 1.5);
             

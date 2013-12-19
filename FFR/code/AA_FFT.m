@@ -9,6 +9,8 @@ function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQ
 %   ERPF:   cell, each element is the full path to an ERP file
 %   PLEV:   plot level setting (1=just group, 2=group and subject data;
 %           default=1)
+%   FRANGE: 2x1 or 1x2 double array, frequency range to zoom in on in
+%           plots. (e.g., FRANGE=[10 80];)
 %   NSEM:   integer, number of SEMs to include in error bars (default=0)
 %   BINS:   integer index, BINS to include in the analysis
 %   TFREQS: double array, test frequencies to return amplitude values at.
