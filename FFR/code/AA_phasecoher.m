@@ -1,8 +1,8 @@
 function [PLV, FOUT, PLVOUT]=AA_phasecoher(ERPF, FRANGE, CHANS, NSEM, BINS, PLEV, TFREQS)
-%% DESCRIPTION:%
+%% DESCRIPTION:
 %
-%   Extract data and compute phase coherence values within and across
-%   listeners.
+%   Extract data and compute phase coherence values (PLVs) within and across
+%   listeners. Generates basic plots of PLVs. 
 %
 % INPUT:
 %
@@ -19,12 +19,35 @@ function [PLV, FOUT, PLVOUT]=AA_phasecoher(ERPF, FRANGE, CHANS, NSEM, BINS, PLEV
 %           doesn't, things won't work properly or not at all (more likely
 %           the latter). 
 %
+%   FRANGE: 2x1 or 1x2 double array, frequency range to zoom in on in
+%           plots. (e.g., FRANGE=[10 80];)
+%
 %   CHANS:  integer array, channels to compute phase coherence on.
 %           (default=1). (Currently untested with multiple channels)
-%   ...
+%
+%   NSEM:   integer, number of SEMs to include in error bars (default=0)
+%
+%   BINS:   integer index, BINS to include in the analysis
+%
+%   PLEV:   plot level setting (1=just group, 2=group and subject data;
+%           default=1)
+%
+%   TFREQS: double array, test frequencies to return amplitude values at.
 %
 % OUTPUT:
 %
+%   PLV:    CxFxBxS matrix of PLVs, where C is the number of channels, F is
+%           the number of frequencies (timepoints), B is the number of
+%           BINS, and S is the number of individual datasets (subjects).
+%
+%   FOUT:   double array, actual frequencies for PLVOUT. Note that this
+%           may differ from TFREQS and the experimenter should use
+%           whichever variable is more appropriate for his/her needs.
+%
+%   PLVOUT: CxFxBxS matrix of PLVs, where C,F,B,S are described above. The
+%           difference between PLV and PLVOUT is that PLVOUT only has the
+%           PLVs for frequencies listed in FOUT. This proved useful when
+%           doing hand plotting/calculations at the command line.
 %
 % NOTE: Keep in mind the PLVs are biased by the number of trials used to
 %       estimate them: PLVs tend to be larger with low trial numbers. So
@@ -275,6 +298,10 @@ if PLEV>0
         legend(LABELS, 'Location', 'Best'); 
         title(['CHAN=' num2str(c) '(' CLABELS{c} ') | N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']); 
         ylim([0 1]); % set y limits so it's easier to compare across subjects later.
+        
+        % Add grids for visualization in notes later
+        set(gca, 'XGrid', 'on')
+        set(gca, 'YMinorGrid', 'on'); 
         
         % Set domain if user specifies it
         if exist('FRANGE', 'var') && ~isempty(FRANGE)
