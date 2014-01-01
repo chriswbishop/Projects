@@ -1,4 +1,4 @@
-function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS, PLOTPHASE)
+function [FOUT, AOUT, POUT, LABELS, NOUT, SNR]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQS, PLOTPHASE, NOISE)
 %% DESCRIPTION:
 %
 %   Basic function to compute an FFT based on ERP data structure for AA02
@@ -15,6 +15,15 @@ function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQ
 %   BINS:   integer index, BINS to include in the analysis
 %   TFREQS: double array, test frequencies to return amplitude values at.
 %   PLOTPHASE:  bool, flag to generate phase plots at TFREQS
+%   NOISE:  1x1, 2x1, or 1x2 double array defining the noise estimation 
+%           window relative to each TFREQ. the noise estiamtion is used to
+%           compute the signal to noise ratio (SNR) for each TFREQ. 
+%
+%           If NOISE is a single number
+%           (e.g., NOISE=5), then the sampling window will be symmetric
+%           about the each TFREQ. Use a 1x2 or 2x1 array (e.g., NOISE = [5
+%           1] to create asymmetric noise sample. If left empty, then SNR
+%           will not be computed.
 %
 % OUTPUT:
 %
@@ -26,6 +35,9 @@ function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQ
 %   LABELS: cell array, bin labels from ERP.bindescr field.
 %   POUT:   phase angles for target frequencies (TFREQS). Angles are in
 %           radians. Use 'polar.m' to visualize.
+%   NOUT:   FxN double array, frequencies used in noise estimation. 
+%   SNR:    FxBxS matrix, where Z is the number of target frequencies, B is 
+%           the number of BINS, and S is the number of subjects.
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -35,17 +47,16 @@ function [FOUT, AOUT, POUT, LABELS]=AA_FFT(ERPF, FRANGE, NSEM, BINS, PLEV, TFREQ
 if ~exist('PLEV', 'var') || isempty(PLEV), PLEV=1; end
 if ~exist('NSEM', 'var') || isempty(NSEM), NSEM=0; end % 0 by default
 if ~exist('TFREQS', 'var'), TFREQS=[]; end % empty by default
+if ~exist('NOISE', 'var'), NOISE=[]; end % empty by default
+if length(NOISE)==1, NOISE=[NOISE NOISE]; end % create symmetric noise sample
 
 %% OUTPUTS
 FOUT=[];
 AOUT=[]; 
-POUT=[];
+POUT=[]; 
+NOUT=[];    % Noise frequency bins used in noise estimation.
+SNR=[];     % signal to noise ratio
 
-% PRE-STIM FFT STUFF
-pY=[];
-pA=[]; % One sided amplitude data
-pP=[]; % Phase data
-    
 % POST-STIM FFT STUFF
 Y=[]; % Complex FFT 
 A=[]; % One sided amplitude data
@@ -80,21 +91,9 @@ for s=1:length(ERPF)
     %% COMPUTE FFT FOR EACH DATA BIN    
     for i=1:length(BINS)
     
-%         % Compute pre-stim data (useful for noise sanity check...I think)
-%         L=length(BLMASK);
-%         NFFT = L; % Not doing next power of 2 in an attempt to get coherent sampling
-%         pf = FS/2*linspace(0,1,NFFT/2+1);
-%         
-%         y=DATA(BLMASK,BINS(i)); 
-%         
-%         pY(:,i,s)=fft(y,NFFT)/NFFT; % Normalize FFT output
-%         pA(:,i,s)=2*abs(pY(1:NFFT/2+1,i,s)); 
-%         pP(:,i,s)=angle(pY(1:NFFT/2+1,i,s)); % Need to check this.    
-%         
         % Compute post-stim data
         L=length(TMASK);
         NFFT=L;
-%         NFFT = 2^nextpow2(L); % Next power of 2 from length of y
         f = FS/2*linspace(0,1,NFFT/2+1);
         
         y=DATA(TMASK,i); 
@@ -129,38 +128,21 @@ for s=1:length(ERPF)
                 warning('AA02_FFT:NoMatch', [num2str(TFREQS(z)) ' not found! Closest frequency is ' num2str(f(ind)) ' Hz. \n\nProceeding with closest frequency. \n\nSee FOUT for exact frequencies.']);                 
             end % if isempty(ind)
             
-            % Grab amplitude value
+            % Grab frequency, amplitude, and phase values
             FOUT(z)=f(ind); 
             AOUT(z,i,s)=A(ind,i,s);
             POUT(z,i,s)=P(ind,i,s); % return phase information
-                        
+            
+            % Find noise bins
+            nout=[find(f<=(TFREQS(z)-NOISE(1)),1,'last'):ind-1 ind+1:find(f>=(TFREQS(z)+NOISE(2)),1,'first')];
+            
+            % Compute SNR
+            SNR(z,i,s)=db((AOUT(z,i,s))./mean(A(nout,i,s),1));
+            
+            % Store frequency bins used to estimate noise for each TFREQ
+            NOUT(z,:)=f(nout); 
         end % for z=1 ...
     end % for i=1:size(DATA,3)
-    
-    %% PLOT SUBJECT DATA
-    %   Only plot if user specifies this level of detail
-    %   If you'd like to plot individual subject data, call this function
-    %   with a single ERPF field populated. That way all the plotting ends
-    %   up being the same no matter how many subjects are used. 
-%     if PLEV==2
-%         figure, hold on
-%         % plot pre-stim data
-%     %     plot(pf, squeeze(pA(:,:,s)), '--', 'linewidth', 1);
-%     
-%         % plot post-stim data
-%         plot(f, squeeze(A(:,:,s)), '-', 'linewidth', 2);
-%         title('Single-Sided Amplitude Spectrum of y(t)')
-%         xlabel('Frequency (Hz)')
-%         ylabel('|Y(f)| (uV)')    
-%         legend(LABELS, 'Location', 'Best'); 
-%         title([ERP.erpname ' | Bins: [' num2str(BINS) ']']); % set ERPNAME as title
-%     
-%         % Set domain if user specifies it
-%         if exist('FRANGE', 'var')
-%             xlim(FRANGE);
-%         end %
-%     end % if PLEV==2
-    
     
 end % for s=1:size(SID,1)
 
@@ -248,3 +230,32 @@ if ~isempty(FOUT) && PLOTPHASE && PLEV>0
     end % i=1:length(TFREQS)
     
 end % ~isempty(TFREQS) && PLOTPHASE
+
+%% PLOT MEAN SNR AS A FUNCTION OF TARGET FREQUENCY
+%   Plot mean SNR and standard error of the mean (SEM) for each target
+%   frequency. Include SNRs for all target frequencies in a single plot.
+%   Different trace for each BIN.
+%
+%   Recall that SNR is a ZxBxS matrix, where Z is the number of target
+%   frequencies, B is the number of BINS, and S is the number of subjects
+if ~isempty(FOUT) && PLEV>0
+    
+    % Open figure
+    figure, hold on
+    
+    %% CALCULATE SEM
+    %   Plotted first for ease of legend labeling. Yes, I know I'm looping
+    %   through the data twice. Yes, it is inefficient. No, I don't care. 
+    U=std(SNR,0,3)./sqrt(size(SNR,3)).*NSEM;
+    
+    %% CALCULATE MEAN
+    %barweb(barvalues, errors, width, groupnames, bw_title, bw_xlabel, bw_ylabel, bw_colormap, gridstatus, bw_legend, error_sides, legend_type)
+    tdata=mean(SNR,3); 
+    barweb(tdata, U, [], TFREQS, [], [], [], color2colormap({colorDef{BINS}}), 'xy');  
+    
+    xlabel('Frequency (Hz)')
+    ylabel('SNR (dB)')
+    legend(LABELS, 'Location', 'northeast'); 
+    title(['N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']);     
+    
+end % ~isempty(FOUT) & PLEV>0
