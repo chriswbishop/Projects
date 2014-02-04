@@ -1,4 +1,4 @@
-function AA04_Paradigm(SESSTYPE, CIRCUIT)
+function RP=AA04_Paradigm(SESSTYPE, CIRCUIT)
 %% DESCRIPTION:
 %
 %   Basic paradigm for Experiment AA04. The function is very barebones and
@@ -48,6 +48,18 @@ if ~exist('CIRCUIT', 'var') || isempty(CIRCUIT)
     CIRCUIT=fullfile('..', 'RP_Files', 'AA04.rcx');
 end % if ~exist('CIRCUIT', 'var') ...
 
+%% DEFAULT TRIGGER DELAYS
+%   Different delays for the two sounds.
+%   Empirically verified by CWB on 2/4/2014.
+%   See http://www.evernote.com/shard/s353/sh/5c9cc9fc-e602-45b3-86e8-c5016d797b09/5cafb3acec6ac68b42c844e805ef7ddd
+%   
+%   For reasons CWB cannot explain, there's a variable trigger offset for
+%   each of these stimuli. Even MORE oddly, the difference is almost
+%   exactly the difference measured difference in sound onset times of ~7.1
+%   ms. Weird. CWB has no idea why this is the case. 
+badelay=0.0637 + 0.1469124;      % /ba/ delay in sec
+mbadelay=0.0566 +  0.154012;    % /mba/ delay in sec
+
 % Set correct filename (P) and Trigger CODE (TCODE)
 %   Also performs input check on SESSTYPE and throws an error if the input
 %   isn't one of the expected 4 values.
@@ -63,7 +75,7 @@ switch SESSTYPE
         
         % Trigger delay
         %   Time locked to sound onset. Empirically verified by CWB on XXX.
-        TDELAY=0.0636; 
+        TDELAY=badelay; 
     case {2, 4}
         % load /mba/
         P=fullfile('..', 'stims', 'MMBF6.wav'); 
@@ -73,13 +85,13 @@ switch SESSTYPE
         
         % Trigger delay
         %   Time locked to sound onset. Empirically verified by CWB on XXX.
-        TDELAY=0.0564;
+        TDELAY=mbadelay; % trigger delay in samples
     case {5}
         % load /ba/
         P=fullfile('..', 'stims', 'MMBF7.wav'); 
         
         % Set trigger code
-        TCODE=5; 
+        TCODE=badelay; 
     case {255}
         % Designed for trigger timing tests. 
         P=fullfile('..', 'stims', 'MMBF7.wav'); 
@@ -90,10 +102,10 @@ switch SESSTYPE
         
         % Trigger delay
         %   Time locked to sound onset. Empirically verified by CWB on XXX.
-        TDELAY=0.0636; 
+        TDELAY=badelay; 
     otherwise
         error('AA04:InvalidSESSTYPE', ...
-            ['''' num2str(SESSTYPE) ''' is not a valid input (1,2,3,4,5,255).']);
+            ['''' num2str(SESSTYPE) ''' is not a valid input [1,2,3,4,5,255].']);
 end % switch SESSTYPE
 
 % Load data and sampling rate from file
@@ -122,8 +134,10 @@ SOA=1.993 + length(DATA)./dfs;      % Stimulus Onset Asynchrony (SOA) in seconds
                                     % necessary. 
 NTRIALS=400;      % Number of TRIALS for this session.
 FSLEVEL=3;      % TDT FSLEVEL corresponding to ~50 kHz sampling rate. High sampling rate to prevent digitizator noise
-TDELAY=TDELAY+0.146;   % Constant trigger offset with AA04. Not sure why yet. 
-% TDELAY=0;     % Custom values set in switch statement above. 
+% TDELAY=TDELAY+ 0.146928;    % CWB Notes a constant trigger offset using AA04.rcx. This corrects for it.
+                            % CWB slightly confused why the triggers are so
+                            % delayed, but can't figure it out at the
+                            % moment.
 TRIGDUR=0.02;   % TRIGger DURation (sec)
 
 % Pad stimulus to correct SOA
@@ -191,7 +205,7 @@ RP.Halt;
 %   Several of these must be converted to samples first. 
 if ~RP.SetTagVal('WavSize', length(DATA)), error('Parameter not set!'); end
 if ~RP.WriteTagV('Snd', 0, DATA), error('Data not sent to TDT!'); end
-if ~RP.SetTagVal('TrigDelay', round(TDELAY*1000)), error('Parameter not set!'); end % TRIGger DELAY in msec
+if ~RP.SetTagVal('TrigDelay', round(TDELAY*FS)), error('Parameter not set!'); end % TRIGger DELAY in SAMPLES
 % if ~RP.SetTagVal('TrigDelay', round(250)), error('Parameter not set!'); end % TRIGger DELAY in msec
 if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
 if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
