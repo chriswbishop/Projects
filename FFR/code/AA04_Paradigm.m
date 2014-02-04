@@ -98,7 +98,7 @@ SOA=1.993 + length(DATA)./dfs;      % Stimulus Onset Asynchrony (SOA) in seconds
                                     % This can be modified to use a
                                     % uniformly sampled jitter window if
                                     % necessary. 
-NTRIALS=400;    % Number of TRIALS for this session.
+NTRIALS=5;      % Number of TRIALS for this session.
 FSLEVEL=3;      % TDT FSLEVEL corresponding to ~50 kHz sampling rate. High sampling rate to prevent digitizator noise
 TDELAY=0;        % Trigger TIME relative to sound onset (sec).
 TRIGDUR=0.02;   % TRIGger DURation (sec)
@@ -131,15 +131,35 @@ FS = RP.GetSFreq;
 %   300114 CWB: Changed to warning coupled with resampling procedure.
 %   Prevents CWB from having to keep multiple file versions around. The
 %   resampling procedure does not take long.
-if FS ~= dfs, warning('AA04:MismatchedSamplingRate', ...
+if FS ~= dfs 
+    % Save duration of sound in native format
+    ldata=length(DATA)/dfs; 
+    
+    warning('AA04:MismatchedSamplingRate', ...
         ['Sampling rates differ between TDT hardware (' num2str(FS) ') and ' P ' (' num2str(dfs) '). Resampling']);
     % Resample DATA to sampling rate on TDT system
-    DATA=resample(DATA, FS, dfs);
+%     DATA=resample(DATA, FS, dfs);
+
+    % TDT often has a fractional sampling rate, so we need to interpolate
+    % the sound instead of resample. Resample requires whole integer
+    % values, which we simply don't have the luxury of.
+    DATA=interp1(1:length(DATA), DATA, 1:dfs/FS:length(DATA), 'linear');
+    
+    % A catch just in case interpolation biffs something.
+    %   Interpolation will typically be off by 1 sample, so the duration
+    %   errors should be very small provided the sampling rate is high
+    %   enough. 
+    rdata=length(DATA)/FS;
+    if ldata ~= rdata
+        warning('AA04:DurationMismatch', ...
+            ['Duration of resampled data differs from expected by ' num2str(rdata-ldata) '.\n' ...
+            'Or, equivalently, ' num2str((rdata-ldata)*FS) ' sample error']);            
+    end % ldata~=length(DATA)/FS
 end % if FS~=dfs
     
 % Otherwise, zero pad the stimulus to the desired SOA
 zpad=round(SOA*FS - length(DATA)); % to within a sample
-DATA=[DATA; zeros(zpad,1)];
+DATA=[DATA zeros(1,zpad)];
 
 % STOP ONGOING PROCESSING
 RP.Halt;     
@@ -148,9 +168,9 @@ RP.Halt;
 %   Several of these must be converted to samples first. 
 if ~RP.SetTagVal('WavSize', length(DATA)), error('Parameter not set!'); end
 if ~RP.WriteTagV('Snd', 0, DATA), error('Data not sent to TDT!'); end
-if ~RP.SetTagVal('TrigDelay', round(TDELAY*1000)), error('Parameter not set!'); end % TRIGger DELAY in msec
-if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
-if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
+% if ~RP.SetTagVal('TrigDelay', round(TDELAY*1000)), error('Parameter not set!'); end % TRIGger DELAY in msec
+% if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
+% if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
 if ~RP.SetTagVal('NTRIALS', NTRIALS), error('Parameter not set!'); end              % Number of TRIALS
 
 %% START THE CIRCUIT
@@ -160,18 +180,28 @@ RP.Run;
 %   Starts sound playback with the NTRIALS * length(DATA) samples played.
 RP.SoftTrg(1);
 
-%% TRACK COUNTER AND END
+%% TRACK COUNTER AND ESTIMATED TIME TO COMPLETION
 %   Could also see if we can set ENABLE input value to NTRIALS *
 %   LENGTH(DATA). 
+
+% make an 'edit' uicontrol to show the sweeps
+tdisplay = uicontrol('style','edit','string', sprintf('Trial Number\nTime to Completion'),'units','normalized','position',[.2 .6 .6 .3], 'Max', 3, 'Min', 1);
+h=gcf; 
 % get counter value
 COUNTER=RP.GetTagVal('Counter'); 
+
 while COUNTER<=NTRIALS-1 % SimpCount starts at 0, so remove one here
-    disp(['Trial: ' num2str(COUNTER+1)]); 
+    COUNTER=RP.GetTagVal('Counter'); 
+    
+    % Round estimated remaining time to tenths place
+    set(tdisplay,'string',sprintf(['Trial Number: %d (of %d).\n' ...
+    'Estimated Time to Completion: %.1d s'],COUNTER, NTRIALS, round(length(DATA)./FS*(NTRIALS-COUNTER)*10)/10));
+    pause(length(DATA)/FS/4); % Sample 4 times a sweep. 
+%     disp(['Trial: ' num2str(COUNTER+1)]); 
 end % while COUNTER<=NTRIALS-1
 
-display('AA04_Paradigm complete. Stop the Neuroscan recording');
-%% HALT
-%   Only necessary if using MATLAB to terminate playback loop (not so at
-%   present)
-%
-% RP.Halt;
+%% CLOSE COUNTER BOX
+close(h); 
+
+%% TELL USER IT'S OVER!
+display('AA04_Paradigm complete. Stop the Neuroscan recording.');
