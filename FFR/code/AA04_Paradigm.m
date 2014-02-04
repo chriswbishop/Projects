@@ -16,6 +16,7 @@ function AA04_Paradigm(SESSTYPE, CIRCUIT)
 %                   3:  /ba/, inverted polarity
 %                   4:  /mba/, inverted polarity
 %                   5:  /ba/, native polarity, earphone unattached
+%                   255:/ba/, native polarity, CODE TESTING ONLY!
 %
 %   CIRCUIT:    string, full path to circuit to load. This input is *not*
 %               required and is used primarily for debugging purposes.
@@ -50,28 +51,49 @@ end % if ~exist('CIRCUIT', 'var') ...
 % Set correct filename (P) and Trigger CODE (TCODE)
 %   Also performs input check on SESSTYPE and throws an error if the input
 %   isn't one of the expected 4 values.
+%
+%   Also set custom Trigger DELAYs s
 switch SESSTYPE
     case {1, 3}
         % load /ba/
-        P=fullfile('..', 'stims', 'MMBF6.wav'); 
-        
-        % Set trigger code
-        TCODE=1; 
-    case {2, 4}
-        % load /mba/
         P=fullfile('..', 'stims', 'MMBF7.wav'); 
         
         % Set trigger code
-        TCODE=2;
-    case {5}
-        % load /ba/
+        TCODE=1; 
+        
+        % Trigger delay
+        %   Time locked to sound onset. Empirically verified by CWB on XXX.
+        TDELAY=0.0636; 
+    case {2, 4}
+        % load /mba/
         P=fullfile('..', 'stims', 'MMBF6.wav'); 
         
         % Set trigger code
+        TCODE=2;
+        
+        % Trigger delay
+        %   Time locked to sound onset. Empirically verified by CWB on XXX.
+        TDELAY=0.0564;
+    case {5}
+        % load /ba/
+        P=fullfile('..', 'stims', 'MMBF7.wav'); 
+        
+        % Set trigger code
         TCODE=5; 
+    case {255}
+        % Designed for trigger timing tests. 
+        P=fullfile('..', 'stims', 'MMBF7.wav'); 
+        
+        % Set trigger code
+        %   Set to 255 to raise all pins and make it easier to test timing.
+        TCODE=255; 
+        
+        % Trigger delay
+        %   Time locked to sound onset. Empirically verified by CWB on XXX.
+        TDELAY=0.0636; 
     otherwise
         error('AA04:InvalidSESSTYPE', ...
-            ['''' num2str(SESSTYPE) ''' is not a valid input (1,2,3,4).']);
+            ['''' num2str(SESSTYPE) ''' is not a valid input (1,2,3,4,5,255).']);
 end % switch SESSTYPE
 
 % Load data and sampling rate from file
@@ -98,9 +120,10 @@ SOA=1.993 + length(DATA)./dfs;      % Stimulus Onset Asynchrony (SOA) in seconds
                                     % This can be modified to use a
                                     % uniformly sampled jitter window if
                                     % necessary. 
-NTRIALS=5;      % Number of TRIALS for this session.
+NTRIALS=400;      % Number of TRIALS for this session.
 FSLEVEL=3;      % TDT FSLEVEL corresponding to ~50 kHz sampling rate. High sampling rate to prevent digitizator noise
-TDELAY=0;        % Trigger TIME relative to sound onset (sec).
+TDELAY=TDELAY+0.146;   % Constant trigger offset with AA04. Not sure why yet. 
+% TDELAY=0;     % Custom values set in switch statement above. 
 TRIGDUR=0.02;   % TRIGger DURation (sec)
 
 % Pad stimulus to correct SOA
@@ -168,9 +191,10 @@ RP.Halt;
 %   Several of these must be converted to samples first. 
 if ~RP.SetTagVal('WavSize', length(DATA)), error('Parameter not set!'); end
 if ~RP.WriteTagV('Snd', 0, DATA), error('Data not sent to TDT!'); end
-% if ~RP.SetTagVal('TrigDelay', round(TDELAY*1000)), error('Parameter not set!'); end % TRIGger DELAY in msec
-% if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
-% if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
+if ~RP.SetTagVal('TrigDelay', round(TDELAY*1000)), error('Parameter not set!'); end % TRIGger DELAY in msec
+% if ~RP.SetTagVal('TrigDelay', round(250)), error('Parameter not set!'); end % TRIGger DELAY in msec
+if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
+if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
 if ~RP.SetTagVal('NTRIALS', NTRIALS), error('Parameter not set!'); end              % Number of TRIALS
 
 %% START THE CIRCUIT
