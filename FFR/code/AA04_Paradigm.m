@@ -52,13 +52,14 @@ end % if ~exist('CIRCUIT', 'var') ...
 %   Different delays for the two sounds.
 %   Empirically verified by CWB on 2/4/2014.
 %   See http://www.evernote.com/shard/s353/sh/5c9cc9fc-e602-45b3-86e8-c5016d797b09/5cafb3acec6ac68b42c844e805ef7ddd
-%   
-%   For reasons CWB cannot explain, there's a variable trigger offset for
-%   each of these stimuli. Even MORE oddly, the difference is almost
-%   exactly the difference measured difference in sound onset times of ~7.1
-%   ms. Weird. CWB has no idea why this is the case. 
-badelay=0.0637 + 0.1469124;      % /ba/ delay in sec
-mbadelay=0.0566 +  0.154012;    % /mba/ delay in sec
+%
+%   A constant offset of 5.719999999999892e-04 added to both to better
+%   match trigger times. There's some small imprecision somewhere in my
+%   initial measurement loop. 
+% badelay=0.0637 + 0.1469124;         % /ba/ delay in sec
+% mbadelay=0.0566 +  0.154012;        % /mba/ delay in sec
+badelay=0.0637 + 5.719999999999892e-04;     % /ba/ trigger delay in sec
+mbadelay=0.0566 + 5.719999999999892e-04;    % /mba/ trigger delay in sec
 
 % Set correct filename (P) and Trigger CODE (TCODE)
 %   Also performs input check on SESSTYPE and throws an error if the input
@@ -91,10 +92,14 @@ switch SESSTYPE
         P=fullfile('..', 'stims', 'MMBF7.wav'); 
         
         % Set trigger code
-        TCODE=badelay; 
+        TCODE=5; 
+        
+        % Trigger delay
+        %   Time locked to sound onset. Empirically verified by CWB on XXX.
+        TDELAY=badelay;
     case {255}
         % Designed for trigger timing tests. 
-        P=fullfile('..', 'stims', 'MMBF7.wav'); 
+        P=fullfile('..', 'stims', 'MMBF6.wav'); 
         
         % Set trigger code
         %   Set to 255 to raise all pins and make it easier to test timing.
@@ -102,7 +107,7 @@ switch SESSTYPE
         
         % Trigger delay
         %   Time locked to sound onset. Empirically verified by CWB on XXX.
-        TDELAY=badelay; 
+        TDELAY=mbadelay; 
     otherwise
         error('AA04:InvalidSESSTYPE', ...
             ['''' num2str(SESSTYPE) ''' is not a valid input [1,2,3,4,5,255].']);
@@ -150,6 +155,7 @@ end % if length(DATA)/dfs
     
 % ESTABLISH CONNECTION WITH RP 2.1
 RP = actxcontrol('RPco.x',[5 5 26 26]);
+% RP=actxcontrol('RPCo.x',[0 0 0 0]);
 RP.ConnectRP2('USB', 1);
 
 % CLEAR Control Object File (COF)
@@ -200,6 +206,17 @@ DATA=[DATA zeros(1,zpad)];
 
 % STOP ONGOING PROCESSING
 RP.Halt;     
+
+%% BUFFER SIZE CHECK
+%   CWB was dumb and accidentally set the buffer size to 100,000 samples,
+%   which is too short for a >2 s sound file. Consequently, the beginning
+%   of the file was being overwritten by zeros at the end of the file. This
+%   error check is in place to protect CWB in the future from his complete
+%   inability to multiply ~50,000 * 2.25. Win.
+if length(DATA) > RP.GetTagVal('WavSize')
+    error('AA04:BufferTooSmall', ...
+    ['The buffer is too small! Increase to a minimum of ' num2str(length(DATA)) '!']);
+end % if length(DATA) > RP.GetTagVal
 
 %% SET TDT TAG VALUES
 %   Several of these must be converted to samples first. 
