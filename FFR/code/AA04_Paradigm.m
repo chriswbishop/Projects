@@ -25,7 +25,7 @@ function RP=AA04_Paradigm(SESSTYPE, CIRCUIT)
 %
 % OUTPUT:
 %
-%   None that I can think of ...
+%   RP:     Active X controller object for RP2.1. 
 %
 %   Note: As of 01/30/2014, this has not been tested with the TDT system.
 %
