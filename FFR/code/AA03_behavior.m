@@ -54,22 +54,21 @@ rng('shuffle', 'twister')
 % Condition specific information
 %   Trial timing information
 %   Feedback information
+DEL_RESP2FEED=1;    % Delay between response and feedback (sec)
+DUR_FEED=0.3;       % Feedback duration (sec)
+DEL_FEED2TRL=2;     % Delay after feedback to beginning of next trial (sec)
 switch lower(BEH_TYPE)
-    case {'behavior'}
-                
-    case {'training'}
-        
-        % Trial timing information
-        DEL_RESP2FEED=1;    % Delay between response and feedback (sec)
-        DUR_FEED=0.3;       % Feedback duration (sec)
-        DEL_FEED2TRL=2;     % Delay after feedback to beginning of next trial (sec)
-        
-        % Default screen information
-        %   Information for button presses. 
-        
+    case {'behavior' 'training'}
+%         % Trial timing information
+%         DEL_RESP2FEED=1;    % Delay between response and feedback (sec)
+%         DUR_FEED=0.3;       % Feedback duration (sec)
+%         DEL_FEED2TRL=2;     % Delay after feedback to beginning of next trial (sec)
         % Response information
         RESP_KEYS={'B' 'M'};    % first entry for /ba/, second for /mba/
-    case {'exposure'}
+        PROMPT=[RESP_KEYS{1} '=/ba/ ' RESP_KEYS{2} '=/mba/'];
+    case {'exposure'}        
+        RESP_KEYS={'B'};    % Press this key to advance
+        PROMPT=['Press ' RESP_KEYS{1} ' to continue.'];
 end % switch lower(BEH_TYPE)
 
 % Universal key information
@@ -90,11 +89,16 @@ FSLEVEL=3;  % TDT sampling rate (Level 3 = ~49kHz, but poll info to be sure)
 % Screen information (UNIVERSAL)
 SCREEN_NUM=max(Screen('Screens'));     % secondary monitors used by default.
 
+DEF_CROSS_COL=[255 255 255];    % default cross color (white)
+CROSS_FEEDBACK_COL=[0 255 0];   % cross color for feedback (green)
+
 %% SAVED DATA PARAMETERS
 %   Parameters to save to mat file. 
 TORDER=AA04_SESSORDER(1:length(FILES), NTRIALS);   % randomize using AA04_SESSIONORDER
-KBRESP=nan(size(TORDER));                   % initialize with nans so screening for issues easy.
+RESP=nan(size(TORDER));                     % Listener button press
 RESPTIME=nan(size(TORDER));                 % RESPTIME in ... some unit of time ...
+ROUTCOME=nan(size(TORDER));                 % Binary output, true if response correct, false otherwise.
+TSTART=nan(size(TORDER));                   % Trial start time
 
 %% INITIALIZE SUBJECT
 %   Create subject specific mat file with date prepended.
@@ -135,10 +139,11 @@ end % ~LOCAL_AUDIO
 %   Screen should have a white fixation cross with instructions below it
 %   reading "index finger=/ba/ middle finger=/mba/" or something to that
 %   effect.
+Screen('Preference', 'SuppressAllWarnings', 1); % Suppress screen warnings
+Screen('Preference', 'SkipSyncTests', 2 );      % Skip calibration tests. We don't care. 
 [SCREEN_HANDLE]=Screen('OpenWindow', SCREEN_NUM);
-Screen('Preference', 'SuppressAllWarnings', 1); % suppress screen warnings
 RES=Screen('Resolution', SCREEN_NUM);    % screen resolution structure. Used for positioning text on screen.
-POST_SCREEN(RES, SCREEN_HANDLE, [RESP_KEYS{1} '=/ba/ ' RESP_KEYS{2} '=/mba/'], [255 255 255]);
+POST_SCREEN(RES, SCREEN_HANDLE, PROMPT, DEF_CROSS_COL);
 
 %% LOAD AUDIO FILES
 %   Load in audio files
@@ -188,8 +193,7 @@ for i=1:length(FILES)
 end % i=length(FILES)
 
 %% CONVERT RESPONSE KEYS FROM STRINGS TO INTEGERS
-%   Initialize to nan for speed. 
- 
+%   Initialize to nan for speed.  
 resp_keys=nan(length(RESP_KEYS)+1,1); 
 for k=1:length(RESP_KEYS)
     resp_keys(k)=KbName(RESP_KEYS{k});
@@ -201,20 +205,13 @@ resp_keys(end)=KbName(QUIT_KEY);
 %% SET TDT PARAMETERS AND START CIRCUIT
 if ~LOCAL_AUDIO
     TCODE=255;
-    TDELAY=1;
+    TDELAY=1/FS;    % delay trigger by a single sample. 
     TRIGDUR=0.02;
     if ~RP.SetTagVal('WavSize', size(SNDS,1)), error('Parameter not set!'); end
     if ~RP.SetTagVal('TrigDelay', round(TDELAY*FS)), error('Parameter not set!'); end % TRIGger DELAY in SAMPLES        
     if ~RP.SetTagVal('TrigDur', round(TRIGDUR*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
-    if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE
-    
+    if ~RP.SetTagVal('TrigCode', TCODE), error('Parameter not set!'); end               % Trigger CODE    
 end % ~LOCAL_AUDIO
-
-%% INTIALIZE VARIABLES TO SAVE
-TSTART=[];  % Trial start time returned from GetSecs
-RESP=[];    % Response value
-RESPTIME=[];    % response time (sec)
-ROUTCOME=[];    % Response outcome - true if correct, false if incorrect. 
 
 %% PAUSE AT BEGINNING
 %   After screen posts and everything is setup, pause for a couple of
@@ -262,6 +259,10 @@ for i=1:length(TORDER)
     %   Second input turns character display (i.e., typing will not appear
     %   in command window). If you want to see what you or a subject are/is
     %   typing, set to "true".
+    %
+    %   02/05/2014 CWB: Encountering a fatal bug with LoadPsychHID on 32
+    %   bit system. Not sure how to fix it. For now, set second input to
+    %   'true'.
     [rtime, key_num]=KbWait4Key(resp_keys, true);     
        
     % Check if subject wants to quit
@@ -283,39 +284,37 @@ for i=1:length(TORDER)
     clear routcome; 
     
     % Pause before feedback
-    pause(DEL_RESP2FEED);
+    pause(DEL_RESP2FEED);   
     
-    % Insert your custom feedback routine here. First guess is that a
-    % simple color change of the fixation cross would be fine. 
-    switch lower(BEH_TYPE)
-        case {'training'}
-            % Post green or white cross
-            %   Green cross = correct response
-            %   white cross = incorrect response
-            if ROUTCOME(i)
-                POST_SCREEN(RES, SCREEN_HANDLE, [RESP_KEYS{1} '=/ba/ ' RESP_KEYS{2} '=/mba/'], [0 255 0]);
-            else
-                POST_SCREEN(RES, SCREEN_HANDLE, [RESP_KEYS{1} '=/ba/ ' RESP_KEYS{2} '=/mba/'], [255 255 255]);
-            end % if routcome
-            pause(DUR_FEED);
-            POST_SCREEN(RES, SCREEN_HANDLE, [RESP_KEYS{1} '=/ba/ ' RESP_KEYS{2} '=/mba/'], [255 255 255]);
-        case {'behavior'}
-        case {'exposure'}
-    end % switch
+    % Provide feedback if this is a training session and the listener
+    % nailed it. 
+    %   Green cross = correct response
+    %   white cross = incorrect response
+    if ROUTCOME(i) && strcmpi(BEH_TYPE, 'training')            
+        POST_SCREEN(RES, SCREEN_HANDLE, PROMPT, CROSS_FEEDBACK_COL);
+    else
+        POST_SCREEN(RES, SCREEN_HANDLE, PROMPT, DEF_CROSS_COL);
+    end % if routcome
+    pause(DUR_FEED);
+    POST_SCREEN(RES, SCREEN_HANDLE, PROMPT, DEF_CROSS_COL);    
+    
+    % Temporary time variable
+    %   Useful for making sure the save command doesn't take too long.
+    t=GetSecs;
     
     % Save data
-    %   use save command
-    %   Verify that save is not eating up too much time (> time from
-    %   response to feedback). If it DOES, then throw an error. 
-     save(MFILE, 'TORDER', 'RESP', 'RESPTIME', 'TSTART', 'ROUTCOME'); 
+    %   CWB was saving individual variables but then opted to save
+    %   everything on the stack. There's just too much that might prove to
+    %   be useful.
+    save(MFILE); 
     
-    % Wait to provide feedback
+    % Wait to provide feedback   
     %   Might be more precise ways to control this, but this is very easy.
     %   And timing is not super precise anyway. 
     %
-    %   XXX This conditional statement doesn't make any sense. A tired CWB
-    %   clearly wrote it. XXX
-    if (GetSecs - TSTART(i))>0
+    %   Conditional statement to make sure the save call above hasn't taken
+    %   too long. 
+    if (GetSecs - t)<DEL_FEED2TRL
         pause(GetSecs - TSTART(i)); 
     else
         error('AA03:Feed2NextTrl', ...
@@ -436,8 +435,6 @@ else
     OUTCOME=false;
 end % RESP==RESP_KEYS(STIM)
 end % RESP_CHECK
-
-
 
 function POST_SCREEN(RES, SCREEN_HANDLE, PROMPT, CROSSCOL)
 %% DESCRIPTION:
