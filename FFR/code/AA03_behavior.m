@@ -28,10 +28,9 @@ function AA03_behavior(SID, BEH_TYPE, LOCAL_AUDIO, CIRCUIT)
 %
 % List of desired features
 %
-%   - Support TDT and local audio. Local audio for testing only.
-%   - Track and save stimulus order, responses, reaction time data to MAT
-%   file
-%   - Button presses for response selection
+%   - POST_SCREEN positions text in an awkward and hard-coded way. Make it
+%   better.
+%   - Add non-TDT playback support. 
 
 %% INPUT CHECK AND DEFAULTS
 %   Default to TDT playback
@@ -382,7 +381,7 @@ end % subject directory
 %% DOES A MAT-FILE ALREADY EXIST?
 %   Suggest a mat file name and see if it exists already. If it does,
 %   suggest a file name with appended counter. 
-MFILE=fullfile('..', 'behavior', SID, [SID '-AA04-' BEH_TYPE '-01.mat']);
+MFILE=fullfile('..', 'behavior', SID, [SID '-AA03-' BEH_TYPE '-01.mat']);
 mfile=MFILE;
 fnum=1; 
 
