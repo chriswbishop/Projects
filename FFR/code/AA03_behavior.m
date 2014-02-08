@@ -105,8 +105,7 @@ TSTART=nan(size(TORDER));                   % Trial start time
 MFILE=INITIALIZE_SUBJECT(SID, BEH_TYPE);
 
 %% INITIALIZE SOUND PLAYBACK DEVICE/DRIVER
-%   If we are using TDT, initialize the device here. Otherwise, initialize
-%   PsychPortAudio
+%   If we are using TDT, initialize the device here. 
 if ~LOCAL_AUDIO
     % Initialize TDT
     % ESTABLISH CONNECTION WITH RP 2.1
@@ -124,14 +123,6 @@ if ~LOCAL_AUDIO
     
     %% START CIRCUIT
     RP.Run;
-else
-    % Initialization from BasicSoundOutputDemo.
-    %   This doesn't seem to be low-latency mode, so this should not be
-    %   used for research related purposes - just for debugging. 
-    InitializePsychSound;
-    
-    % Get PsychPortAudio Handle
-    PORTAUDIO = PsychPortAudio('Open', [], [], 0, dfs, 2); 
 end % ~LOCAL_AUDIO
 
 %% PRESENT DEFAULT SCREEN
@@ -191,6 +182,16 @@ for i=1:length(FILES)
     end % switch
 end % i=length(FILES)
 
+%% INTIALIZE PORTAUDIO 
+if LOCAL_AUDIO
+    % Initialization from BasicSoundOutputDemo.
+    %   This doesn't seem to be low-latency mode, so this should not be
+    %   used for research related purposes - just for debugging. 
+    InitializePsychSound;
+    
+    % Get PsychPortAudio Handle
+    PORTAUDIO = PsychPortAudio('Open', [], [], 0, dfs, 2); 
+end % if LOCAL_AUDIO
 %% CONVERT RESPONSE KEYS FROM STRINGS TO INTEGERS
 %   Initialize to nan for speed.  
 resp_keys=nan(length(RESP_KEYS)+1,1); 
