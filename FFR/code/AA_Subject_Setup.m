@@ -1,4 +1,4 @@
-function ProjAA_Subject_Setup(STUDYDIR, EXPID, SID)
+function AA_Subject_Setup(STUDYDIR, EXPID, SID)
 %% DESCRIPTION:
 %
 %   Function to setup directories for a new subject. 

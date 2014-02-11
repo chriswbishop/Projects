@@ -1,0 +1,11 @@
+bin 1
+/ba/-native
+.{1}
+
+bin 2
+/ba/-invert
+.{3}
+
+bin 3
+/ba/-unatt
+.{5}

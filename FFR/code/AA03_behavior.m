@@ -93,7 +93,43 @@ CROSS_FEEDBACK_COL=[0 255 0];   % cross color for feedback (green)
 
 %% SAVED DATA PARAMETERS
 %   Parameters to save to mat file. 
-TORDER=AA04_SESSORDER(1:length(FILES), NTRIALS);   % randomize using AA04_SESSIONORDER
+
+% Setup session order.
+%   For exposure, we want to match someone else's trial order precisely. So
+%   load the data from an existing MAT File
+switch lower(BEH_TYPE)
+    case {'exposure'}
+        
+        % Get matching subject ID
+        msid=input('Matching subject ID: ', 's');
+                
+        % Select a MAT file
+        [fname, pname]=uigetfile(fullfile('..', 'behavior', msid, '*.mat'));
+        fname=fullfile(pname, fname); 
+        
+        % Load TORDER
+        %   Try loading it, throw an error if we can't
+        try 
+            load(fname, 'TORDER'); 
+        catch
+            error('AA03:TORDERNotFound', ...
+                'Variable TORDER not found');
+        end % try
+        
+        % Sanity checks to make sure TORDER in MAT file is compatible with
+        % current state of experiment AA03. 
+        %   Might also help to do some other checks for other variables and
+        %   throw warnings if there's a substantial mismatch
+        if length(TORDER)~=length(AA04_SESSORDER(1:length(FILES), NTRIALS))
+            error('Something is not right with TORDER'); 
+        end % if length(TORDER ...
+        
+    case {'behavior' 'training'}
+        TORDER=AA04_SESSORDER(1:length(FILES), NTRIALS);   % randomize using AA04_SESSIONORDER
+    otherwise
+        error('AA03:TrialOrder', ...
+            'Unknown trial order');
+end % switch
 RESP=nan(size(TORDER));                     % Listener button press
 RESPTIME=nan(size(TORDER));                 % RESPTIME in ... some unit of time ...
 ROUTCOME=nan(size(TORDER));                 % Binary output, true if response correct, false otherwise.
