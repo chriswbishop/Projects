@@ -1,7 +1,10 @@
-function jobs = AA04_gab_setup(sid, EXPID)
+function jobs = AA02_gab_setup_CNTCHANOPS(sid, EXPID)
 %% DESCIRPTION
 %
-%   General setup file for AA04.
+%   General setup file for AA02.
+%
+%   Note that this should not be used to analyze AA01 data unless you want
+%   to see a massive rejection rate.
 %
 % INPUT:
 %   
@@ -13,18 +16,10 @@ function jobs = AA04_gab_setup(sid, EXPID)
 %   jobs:   job structure for use with GAB
 %
 % Bishop, Chris Miller Lab 2010
-if ~exist('EXPID', 'var') || isempty(EXPID), EXPID='AA04'; end
-if ~strcmp('AA04', EXPID), error('Wrong setup file??'); end
+if ~exist('EXPID', 'var') || isempty(EXPID), EXPID='AA02'; end
+if ~strcmp('AA02', EXPID), error('Wrong setup file??'); end
 
 studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
-
-% Conditions used in naming
-% Number of repetitions
-if strcmpi(EXPID, 'AA04') 
-%     warning('CB changed conds to [3 5] to recover from bug. Change back to [1 3 5] later'); 
-    conds=[1 3 5];
-    reps=3;
-end % if strcmpi(EXPID, 'AA04')
 
 jobs={};
 for s=1:size(sid,1)
@@ -32,63 +27,71 @@ for s=1:size(sid,1)
     SID=deblank(sid(s,:));
     subDir=fullfile(studyDir,SID);
     
-    % Clear file names and memory mapping names
-    %   Initialize size for speed.    
-    fnames=cell(length(conds)*reps,1);   % CNT file names
-    onames=cell(length(conds)*reps,1);  % Output names after CNT_CHANOPS
-    memmapnames=cell(length(conds)*reps,1); % Memory mapping file names
+    switch SID      
+        case {'CM'} 
+            % From AA02
+            nruns=3;
+        case {'EE' } 
+            % From AA02
+            nruns=2; 
+    end % switch       
     
-    % Subject specific changes 
-    %   Filenames will be different because KM starts at 02 for #1
-    %   condition. 
-    for c=1:length(conds)
-        for r=1:reps            
-            
-            % For KM, start naming scheme for condition 1 at 02. 
-            if strcmpi(SID, 'KM') && conds(c)==1
-                tfname=fullfile(studyDir, SID, 'eeg', sprintf([SID '-AA04-%01d-%02d.cnt'], conds(c), r+1));
-            else
-                tfname=fullfile(studyDir, SID, 'eeg', sprintf([SID '-AA04-%01d-%02d.cnt'], conds(c), r));
-            end % switch                   
-            
-            % Append to file names
-            fnames{(c-1)*reps + r}=tfname;
-            onames{(c-1)*reps + r}=[tfname(1:end-4) '_Cz-LE' tfname(end-3:end)];
-            %   No memory mapping (memmapnames are empty)
-            memmapnames{(c-1)*reps + r}='';
-            
-        end % for r=1:reps
-    end % c=1:length(conds)
-    
-    RAW_CzLE=gab_emptyjob;
-    RAW_CzLE.jobName='RAW_CzLE';
-    RAW_CzLE.jobDir=fullfile(subDir, 'jobs');
-    RAW_CzLE.parent={};
+    ERP=gab_emptyjob;
+    ERP.jobName='ERP-CHANOPS';
+    ERP.jobDir=fullfile(subDir, 'jobs');
+    ERP.parent={};
     
     % Load environmental variables
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func',@gab_task_envvars,...
         'args','');
     
-    % Rewrite data with CNT_CHANOPS
-    RAW_CzLE.task{end+1}=struct(...
+    
+    % Load CNT Files
+    fnames={}; % CNT filenames
+    memmapnames={}; % used for memory mapping files (must enable option in EEGLAB options)
+    stimtype={'AM' 'NoAM'};
+    for j=1:length(stimtype)
+        for i=1:nruns
+            fnames{end+1}=fullfile(subDir, 'eeg', [SID '-' EXPID '-' stimtype{j} '-0' num2str(i) '.cnt']);
+            onames{(j-1)*nruns + i}=[fnames{end}(1:end-4) '_Cz-NAPE' fnames{end}(end-3:end)];
+%             memmapnames{end+1}=fullfile(subDir, 'eeg', [SID '-' EXPID '-' stimtype{j} '-0' num2str(i) '.fdt']);
+            memmapnames{end+1}=''; % no memory mapping
+        end % j=1:length...
+    end % i=1:3
+    
+    % Rewrite data using CNT_CHANOPS
+     % Rewrite data with CNT_CHANOPS
+    ERP.task{end+1}=struct(...
         'func',@gab_task_CNT_CHANOPS,...
         'args',struct(...
             'IN', {fnames}, ...
             'OUT', {onames}, ...
-            'CHANOPS', {{'TP9.*-1'}}, ...
-            'OCHLAB', {{'Cz-LE'}}, ...
+            'CHANOPS', {{'BP1.*1'}}, ... % dummy operation
+            'OCHLAB', {{'Cz-NAPE'}}, ...
             'BLOCKSIZE', 1, ...
-            'DATAFORMAT', []));
-        
-    % Read in rewritten data
-    RAW_CzLE.task{end+1}=struct(...
+            'DATAFORMAT', []));       
+    
+    % Read in data
+    ERP.task{end+1}=struct(...
         'func',@gab_task_eeglab_loadcnt,...
         'args',struct(...
             'files', {onames}, ...
             'memmapfile', {memmapnames}, ...
-            'loadandmerge', false, ...
-            'dataformat', 'int32'));     
+            'loadandmerge', false));
+
+    % Filter Datasets
+    ERP.task{end+1}=struct(...
+        'func', @gab_task_erplab_pop_basicfilter, ...
+        'args', struct( ...
+            'chanArray', 1, ...
+            'params', ...
+                {{'Filter', 'bandpass', ...
+                'Design', 'butter', ...
+                'Cutoff', [0.1 40], ...
+                'Order', 4, ...
+                'RemoveDC', 'on', ...
+                'Boundary', 'boundary'}}));  
     
     % Create Eventlists for all Datasets
     %    'Eventlist'             - name (and path) of eventlist text file to export.
@@ -96,7 +99,7 @@ for s=1:size(sid,1)
     %    'BoundaryNumeric'           - numeric code that boundary string code is to be converted to
     %    'Warning'               - 'on'- Warn if eventlist will be overwritten. 'off'- Don't warn if eventlist will be overwritten.
     %    'AlphanumericCleaning'  - Delete alphabetic character(s) from alphanumeric event codes (if any). 'on'/'off'
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_creabasiceventlist, ...
         'args', struct( ...
             'params', ...
@@ -132,7 +135,7 @@ for s=1:size(sid,1)
     %                    'All'- send to all of them.
     %     'Report'      - 'on'= create report about binlister performance, 'off'= do not create a report.
     %     'Saveas'      - (optional) open GUI for saving dataset. 'on'/'off'
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_binlister, ...
         'args', struct( ...
             'params', {{'BDF', fullfile(studyDir, '..', 'code', ['BINS_' EXPID '.txt']), ...
@@ -145,7 +148,7 @@ for s=1:size(sid,1)
                'Saveas', 'off'}}));
     
     % Overwrite Event Type in EEG Structure
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_overwritevent, ...
         'args', struct(...
             'mainfield', 'binlabel')); % label 'type' with human readable BIN information
@@ -154,14 +157,14 @@ for s=1:size(sid,1)
     % trange    - window for epoching in msec
     % blc       - window for baseline correction in msec or either a string like 'pre', 'post', or 'all'
     %            (strings with the baseline interval also works. e.g. '-300 100')
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_epochbin,...
         'args', struct(...
             'trange', [-100 1000], ... % use short time range for testing. 
             'blc', 'pre')); % baseline based on pre-stimulus onset.   
         
     % Merge datasets
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_eeg_mergeset, ...
         'args', '');         
 
@@ -183,11 +186,11 @@ for s=1:size(sid,1)
     % bullshit numbers since it's indexing a now incorrect EVENTLIST field.
     %   acce(i)  = EEG.EVENTLIST.trialsperbin(i)-rej(i);
     %
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_artextval,...
         'args', struct(...
             'params', {{...
-                'Twindow', RAW_CzLE.task{end-1}.args.trange, ... % use the whole time range
+                'Twindow', ERP.task{end-1}.args.trange, ... % use the whole time range
                 'Threshold', [-80 80], ... % 50 microvolt rejection criterion
                 'Channel', 1, ... % onle a single channel
                 'Flag', 1, ... % mark with a 1 for threshold rejection
@@ -205,10 +208,10 @@ for s=1:size(sid,1)
     %                and the transposed data in a binary float '.dat' file.
     %                By default the option from the eeg_options.m file is 
     %                used.
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_eeglab_saveset, ...
         'args', struct(...
-            'params', {{'filename', [SID '-RAW_CzLE.set'], ...
+            'params', {{'filename', [SID '-ERP.set'], ...
                'filepath', fullfile(subDir, 'analysis'), ... 
                'check', 'off', ... 
                'savemode', 'onefile'}}));
@@ -227,7 +230,7 @@ for s=1:size(sid,1)
     %        'ExcludeBoundary'  - exclude epochs having boundary events. 'on'/'off'
     %        'Saveas'           - (optional) open GUI for saving averaged ERPset. 'on'/'off'
     %        'Warning'          - enable popup window warning. 'on'/'off'
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_averager, ...
         'args', struct(...
             'params', {{'DSindex', 1, ...
@@ -245,11 +248,11 @@ for s=1:size(sid,1)
     %         'gui'              - 'save', 'saveas', 'erplab' or 'none'
     %         'overwriteatmenu'  - overwite erpset at erpsetmenu (no gui). 'on'/'off'
     %         'Warning'          - 'on'/'off'
-    RAW_CzLE.task{end+1}=struct(...
+    ERP.task{end+1}=struct(...
         'func', @gab_task_erplab_pop_savemyerp, ...
         'args', struct(...
-            'params', {{'erpname', [SID '-RAW_CzLE'], ...
-                'filename', [SID '-RAW_CzLE.mat'], ...
+            'params', {{'erpname', [SID '-ERP'], ...
+                'filename', [SID '-ERP.mat'], ...
                 'filepath', fullfile(subDir, 'analysis'), ...
                 'gui', 'none', ...
                 'Warning', 'off'}}));
@@ -260,41 +263,41 @@ for s=1:size(sid,1)
     %   Create event related time average without any filtering. I was
     %   having significant trouble getting a solid FFR (1000 Hz) from the
     %   data so I'd like to rule out any effects of filtering.
-%     RAW=ERP;
-%     RAW.jobName='RAW';
+    RAW=ERP;
+    RAW.jobName='RAW-Cz-NAPE';
     
     % Change epoched time window
     %   Same analysis window.
 %     RAW.task{7}.args.trange=[-100 1000];
     
     % Change saved dataset name
-%     RAW.task{10}=CHANGE_PARAMS(RAW.task{10}, {'filename', [SID '-RAW.set']}); 
+    RAW.task{11}=CHANGE_PARAMS(RAW.task{11}, {'filename', [SID '-RAW-Cz-NAPE.set']}); 
     
     % Change saved ERP information
-%     RAW.task{12}=CHANGE_PARAMS(RAW.task{12}, {'erpname', [SID '-RAW'], 'filename', [SID '-RAW.mat']}); 
+    RAW.task{13}=CHANGE_PARAMS(RAW.task{13}, {'erpname', [SID '-RAW-Cz-NAPE'], 'filename', [SID '-RAW-Cz-NAPE.mat']}); 
     
     % Remove filtering task
     %   No additional, offline filtering applied in this job.
-%     RAW=gab_remove_task(RAW, 3); 
+    RAW=gab_remove_task(RAW, 4); 
   
     %% FFR JOB
     %   Nearly identical to ERP job, except with a different passband
-%     FFR=ERP; 
-%     FFR.jobName='FFR';
+    FFR=ERP; 
+    FFR.jobName='FFR-Cz-NAPE';
     
     % Change filtering parameters; all else held constant.
-%     FFR.task{3}=CHANGE_PARAMS(FFR.task{3}, {'Cutoff', [250 2000], 'Order', 4});
+    FFR.task{4}=CHANGE_PARAMS(FFR.task{4}, {'Cutoff', [250 2000], 'Order', 4});
     
     % Change saved dataset name
-%     FFR.task{10}=CHANGE_PARAMS(FFR.task{10}, {'filename', [SID '-FFR.set']}); 
+    FFR.task{11}=CHANGE_PARAMS(FFR.task{11}, {'filename', [SID '-FFR.set']}); 
     
     % Change saved ERP information
-%     FFR.task{12}=CHANGE_PARAMS(FFR.task{12}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
+    FFR.task{13}=CHANGE_PARAMS(FFR.task{13}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
     
     % PUT JOBS TOGETHER
-    jobs{end+1}=RAW_CzLE; 
+%     jobs{end+1}=ERP; 
 %     jobs{end+1}=FFR;
-%     jobs{end+1}=RAW; 
+    jobs{end+1}=RAW; 
     
 end % s
 
