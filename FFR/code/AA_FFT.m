@@ -183,7 +183,7 @@ if PLEV>0
     title(['N=' num2str(length(ERPF)) ' | Bins: [' num2str(BINS) ']']); 
 
     % Set domain if user specifies it
-    if exist('FRANGE', 'var')
+    if exist('FRANGE', 'var') && ~isempty(FRANGE)
         xlim(FRANGE);
     end %
     

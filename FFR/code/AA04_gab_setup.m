@@ -28,8 +28,13 @@ end % if strcmpi(EXPID, 'AA04')
 
 jobs={};
 for s=1:size(sid,1)
-    
-    SID=deblank(sid(s,:));
+
+    % Convert subject IDs if cell or character array. 
+    if isa(sid, 'cell')
+        SID=sid{s};
+    elseif isa(sid, 'char')
+        SID=deblank(sid(s,:));
+    end % if isa
     subDir=fullfile(studyDir,SID);
     
     % Clear file names and memory mapping names
@@ -256,43 +261,42 @@ for s=1:size(sid,1)
     
 
 %     
-    %% UNFILTERED (RAW) DATA
-    %   Create event related time average without any filtering. I was
-    %   having significant trouble getting a solid FFR (1000 Hz) from the
-    %   data so I'd like to rule out any effects of filtering.
-%     RAW=ERP;
-%     RAW.jobName='RAW';
+
+    % Design filter task
+    FILTTASK=struct(...
+        'func', @gab_task_erplab_pop_basicfilter, ...
+        'args', struct( ...
+            'chanArray', 1, ...
+            'params', ...
+                {{'Filter', 'bandpass', ...
+                'Design', 'butter', ...
+                'Cutoff', [100 2000], ... % Filter settings to match PEABR (CWB's old experiment) 
+                'Order', 4, ...
+                'RemoveDC', 'on', ...
+                'Boundary', 'boundary'}}));
+            
+    %% cABR
+    %   Basically the same as RAW, but with a tighter time window, shorter
+    %   baseline, and without any file rewrites at the beginning. Also data
+    %   will be filtered from 70-2000 Hz according to ...
+    %   
+    %   Anderson, S., et al. (2013). Hear Res 300: 18-32.
+    cABR_CzLE=RAW_CzLE;
+    cABR_CzLE.jobName='cABR_CzLE';    
+%     cABR_CzLE.parent=fullfile(cABR_CzLE.jobDir, [RAW_CzLE.jobName '.mat']); 
+    cABR_CzLE.parent='';
+    cABR_CzLE.task{7}.args.trange=[-40 400];
+    cABR_CzLE.task{9}=CHANGE_PARAMS(cABR_CzLE.task{9}, {'Twindow', cABR_CzLE.task{7}.args.trange, 'Threshold', [-30 30]});
+    cABR_CzLE.task{10}=CHANGE_PARAMS(cABR_CzLE.task{10}, {'filename', [SID '-cABR_CzLE.set']});
+    cABR_CzLE.task{12}=CHANGE_PARAMS(cABR_CzLE.task{12}, {'erpname', [SID '-cABR_CzLE'], 'filename', [SID '-cABR_CzLE.mat']}); 
     
-    % Change epoched time window
-    %   Same analysis window.
-%     RAW.task{7}.args.trange=[-100 1000];
-    
-    % Change saved dataset name
-%     RAW.task{10}=CHANGE_PARAMS(RAW.task{10}, {'filename', [SID '-RAW.set']}); 
-    
-    % Change saved ERP information
-%     RAW.task{12}=CHANGE_PARAMS(RAW.task{12}, {'erpname', [SID '-RAW'], 'filename', [SID '-RAW.mat']}); 
-    
-    % Remove filtering task
-    %   No additional, offline filtering applied in this job.
-%     RAW=gab_remove_task(RAW, 3); 
-  
-    %% FFR JOB
-    %   Nearly identical to ERP job, except with a different passband
-%     FFR=ERP; 
-%     FFR.jobName='FFR';
-    
-    % Change filtering parameters; all else held constant.
-%     FFR.task{3}=CHANGE_PARAMS(FFR.task{3}, {'Cutoff', [250 2000], 'Order', 4});
-    
-    % Change saved dataset name
-%     FFR.task{10}=CHANGE_PARAMS(FFR.task{10}, {'filename', [SID '-FFR.set']}); 
-    
-    % Change saved ERP information
-%     FFR.task{12}=CHANGE_PARAMS(FFR.task{12}, {'erpname', [SID '-FFR'], 'filename', [SID '-FFR.mat']}); 
-    
+    % Remove CNT_CHANOPS and add in filtering task
+    cABR_CzLE=gab_remove_task(cABR_CzLE, 2); 
+    cABR_CzLE=gab_insert_task(cABR_CzLE, FILTTASK, 3);     
+        
     % PUT JOBS TOGETHER
-    jobs{end+1}=RAW_CzLE; 
+%     jobs{end+1}=RAW_CzLE; 
+    jobs{end+1}=cABR_CzLE; 
 %     jobs{end+1}=FFR;
 %     jobs{end+1}=RAW; 
     
