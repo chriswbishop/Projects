@@ -65,27 +65,40 @@ for s=1:size(sid,1)
         end % for r=1:reps
     end % c=1:length(conds)
     
-    RAW_CzLE=gab_emptyjob;
-    RAW_CzLE.jobName='RAW_CzLE';
-    RAW_CzLE.jobDir=fullfile(subDir, 'jobs');
-    RAW_CzLE.parent={};
+    %% General PREParation for Cz referenced to left earlobe.     
+    GPREP_CzLE=gab_emptyjob;
+    GPREP_CzLE.jobName='GPREP_CzLE';
+    GPREP_CzLE.jobDir=fullfile(subDir, 'jobs');
+    GPREP_CzLE.parent={}; % no dependencies
     
     % Load environmental variables
-    RAW_CzLE.task{end+1}=struct(...
+    GPREP_CzLE.task{end+1}=struct(...
         'func',@gab_task_envvars,...
         'args','');
     
-    % Rewrite data with CNT_CHANOPS
-    RAW_CzLE.task{end+1}=struct(...
+    % Run CNT_CHANOPS    
+    GPREP_CzLE.task{end+1}=struct(...
         'func',@gab_task_CNT_CHANOPS,...
         'args',struct(...
             'IN', {fnames}, ...
             'OUT', {onames}, ...
             'CHANOPS', {{'TP9.*-1'}}, ...
             'OCHLAB', {{'Cz-LE'}}, ...
-            'BLOCKSIZE', 1, ...
-            'DATAFORMAT', []));
-        
+            'BLOCKSIZE', 30, ...
+            'DATAFORMAT', 'int32', ...
+            'PRECISION', 'single'));
+    
+    %% ERP Job for CzLE
+    RAW_CzLE=gab_emptyjob;
+    RAW_CzLE.jobName='RAW_CzLE';
+    RAW_CzLE.jobDir=fullfile(subDir, 'jobs');
+    RAW_CzLE.parent={fullfile(GPREP_CzLE.jobDir, [GPREP_CzLE.jobName '.mat'])};
+    
+    % Load environmental variables
+    RAW_CzLE.task{end+1}=struct(...
+        'func',@gab_task_envvars,...
+        'args','');
+    
     % Read in rewritten data
     RAW_CzLE.task{end+1}=struct(...
         'func',@gab_task_eeglab_loadcnt,...
@@ -285,18 +298,21 @@ for s=1:size(sid,1)
     cABR_CzLE.jobName='cABR_CzLE';    
 %     cABR_CzLE.parent=fullfile(cABR_CzLE.jobDir, [RAW_CzLE.jobName '.mat']); 
     cABR_CzLE.parent='';
-    cABR_CzLE.task{7}.args.trange=[-40 400];
-    cABR_CzLE.task{9}=CHANGE_PARAMS(cABR_CzLE.task{9}, {'Twindow', cABR_CzLE.task{7}.args.trange, 'Threshold', [-30 30]});
-    cABR_CzLE.task{10}=CHANGE_PARAMS(cABR_CzLE.task{10}, {'filename', [SID '-cABR_CzLE.set']});
-    cABR_CzLE.task{12}=CHANGE_PARAMS(cABR_CzLE.task{12}, {'erpname', [SID '-cABR_CzLE'], 'filename', [SID '-cABR_CzLE.mat']}); 
+    cABR_CzLE.task{6}.args.trange=[-40 400];
+    cABR_CzLE.task{8}=CHANGE_PARAMS(cABR_CzLE.task{8}, {'Twindow', cABR_CzLE.task{6}.args.trange, 'Threshold', [-30 30]});
+    cABR_CzLE.task{9}=CHANGE_PARAMS(cABR_CzLE.task{9}, {'filename', [SID '-cABR_CzLE.set']});
+    cABR_CzLE.task{11}=CHANGE_PARAMS(cABR_CzLE.task{11}, {'erpname', [SID '-cABR_CzLE'], 'filename', [SID '-cABR_CzLE.mat']}); 
     
     % Remove CNT_CHANOPS and add in filtering task
-    cABR_CzLE=gab_remove_task(cABR_CzLE, 2); 
+%     cABR_CzLE=gab_remove_task(cABR_CzLE, 2); % no longer need to remove
+%     this since we are not reading/writing data within each ERP job
+%     anymore. 
     cABR_CzLE=gab_insert_task(cABR_CzLE, FILTTASK, 3);     
         
     % PUT JOBS TOGETHER
-%     jobs{end+1}=RAW_CzLE; 
-    jobs{end+1}=cABR_CzLE; 
+    jobs{end+1}=GPREP_CzLE;
+    jobs{end+1}=RAW_CzLE; 
+%     jobs{end+1}=cABR_CzLE; 
 %     jobs{end+1}=FFR;
 %     jobs{end+1}=RAW; 
     
@@ -340,3 +356,19 @@ end % p=1:2
 
 
 end % CHANGE_PARAMS
+
+function JOB=MODIFY_JOB(JOB, JNAME, PARENT, varargin)
+%% DESCRIPTION:
+%
+%   Function to modify ARGUMENTS
+
+%% CHANGE JOBNAME
+JOB.jobName=JNAME;
+
+%% CHANGE DEPENDENCIES
+JOB.parent=PARENT;
+
+%% PUT REPLACEMENT ARGS INTO VARIABLE
+ARGS=struct(varargin{:}); 
+
+end % MODIFY_GPREP
