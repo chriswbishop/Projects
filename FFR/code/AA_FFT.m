@@ -134,13 +134,18 @@ for s=1:length(ERPF)
             POUT(z,i,s)=P(ind,i,s); % return phase information
             
             % Find noise bins
-            nout=[find(f<=(TFREQS(z)-NOISE(1)),1,'last'):ind-1 ind+1:find(f>=(TFREQS(z)+NOISE(2)),1,'first')];
+            %   Only loop through this if we have a noise window
+            if ~isempty(NOISE)
+                nout=[find(f<=(TFREQS(z)-NOISE(1)),1,'last'):ind-1 ind+1:find(f>=(TFREQS(z)+NOISE(2)),1,'first')];
             
-            % Compute SNR
-            SNR(z,i,s)=db((AOUT(z,i,s))./mean(A(nout,i,s),1));
             
-            % Store frequency bins used to estimate noise for each TFREQ
-            NOUT(z,:)=f(nout); 
+                % Compute SNR
+                SNR(z,i,s)=db((AOUT(z,i,s))./mean(A(nout,i,s),1));
+            
+                % Store frequency bins used to estimate noise for each TFREQ
+                NOUT(z,:)=f(nout); 
+            
+            end % if ~isempty(NOISE)
         end % for z=1 ...
     end % for i=1:size(DATA,3)
     
@@ -238,7 +243,7 @@ end % ~isempty(TFREQS) && PLOTPHASE
 %
 %   Recall that SNR is a ZxBxS matrix, where Z is the number of target
 %   frequencies, B is the number of BINS, and S is the number of subjects
-if ~isempty(FOUT) && PLEV>0
+if ~isempty(FOUT) && PLEV>0 && ~isempty(SNR)
     
     % Open figure
     figure, hold on

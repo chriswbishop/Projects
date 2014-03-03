@@ -39,6 +39,10 @@ if ~exist('NSEM', 'var') || isempty(NSEM), NSEM=0; end % 0 by default
 if ~exist('NOISE', 'var'), NOISE=[-Inf 0]; end % pre stim period
 if ~exist('SIG', 'var'), SIG=[0 Inf]; end % post stim period
 
+%% CONVERT NOISE/SIG FROM SEC TO MSEC
+NOISE=NOISE.*1000; 
+SIG=SIG.*1000; 
+
 %% REPEAT FOR ALL SUBJECTS
 for x=1:length(ERPEXT)
     
@@ -81,7 +85,7 @@ for x=1:length(ERPEXT)
         %   presented. 
         %   NOISE=[-Inf, 0]
         %   SIG=[0+1/ERP.srate/2, Inf]
-        NMASK=AA_maskdomain(ERP.times, NOISE); 
+        NMASK=AA_maskdomain(ERP.times, NOISE); % convert NOISE to msec
         SMASK=AA_maskdomain(ERP.times, SIG); 
     
         % Compute SNR using RMS
@@ -95,11 +99,11 @@ end % for x=1:length(ERPEXT)
 
 % db(RMS)
 %   Plot dB(RMS) as a function of ERPEXT. 
-AA_tSNR_plot(R, LABELS, ERPEXT, NSEM, BINS, [], 'db(rms)');
+AA_tSNR_plot(R, LABELS, ERPEXT, NSEM, BINS, PLEV, 'db(rms)');
 
 % db(peak)
 %   Plot dB(peak) as a function of ERPEXT.
-AA_tSNR_plot(P, LABELS, ERPEXT, NSEM, BINS, [], 'db(peak)');
+AA_tSNR_plot(P, LABELS, ERPEXT, NSEM, BINS, PLEV, 'db(peak)');
 end % AA_tSNR
 
 function AA_tSNR_plot(DATA, LABELS, ERPEXT, NSEM, BINS, PLEV, YLAB)
@@ -122,28 +126,30 @@ function AA_tSNR_plot(DATA, LABELS, ERPEXT, NSEM, BINS, PLEV, YLAB)
 %   University of Washington
 %   2/14
 
-%% GET LINE SPECS
-[colorDef, styleDef]=erplab_linespec(max(BINS));
+if PLEV>0
+    %% GET LINE SPECS
+    [colorDef, styleDef]=erplab_linespec(max(BINS));
 
-figure, hold on
+    figure, hold on
 
-%% AVERAGE OVER CHANNELS
-%   To simplify, first average over channels.
-tdata=mean(DATA,1);
+    %% AVERAGE OVER CHANNELS
+    %   To simplify, first average over channels.
+    tdata=mean(DATA,1);
 
-%% CALCULATE SEM
-%   Plotted first for ease of legend labeling. Yes, I know I'm looping
-%   through the data twice. Yes, it is inefficient. No, I don't care. 
-U=squeeze(sem(tdata,4)).*NSEM; 
+    %% CALCULATE SEM
+    %   Plotted first for ease of legend labeling. Yes, I know I'm looping
+    %   through the data twice. Yes, it is inefficient. No, I don't care. 
+    U=squeeze(sem(tdata,4)).*NSEM; 
 
-%% MASSAGE DATA FOR BAR PLOTS
-tdata=squeeze(mean(tdata,4));
+    %% MASSAGE DATA FOR BAR PLOTS
+    tdata=squeeze(mean(tdata,4));
 
-%% CREATE BARPLOT
-barweb(tdata', U', [], ERPEXT, [], [], [], color2colormap({colorDef{BINS}}), 'xy');  
-xlabel('ERP Extension')
-ylabel(YLAB)
-legend(LABELS, 'Location', 'northeast'); 
-title(['N=' num2str(size(DATA,4)) ' | Bins: [' num2str(BINS) '] | ' num2str(size(DATA,1)) ' Chans']);     
+    %% CREATE BARPLOT
+    barweb(tdata', U', [], ERPEXT, [], [], [], color2colormap({colorDef{BINS}}), 'xy');  
+    xlabel('ERP Extension')
+    ylabel(YLAB)
+    legend(LABELS, 'Location', 'northeast'); 
+    title(['N=' num2str(size(DATA,4)) ' | Bins: [' num2str(BINS) '] | ' num2str(size(DATA,1)) ' Chans']);     
+end % if PLEV>0
 
 end % AA_tSNR_plot

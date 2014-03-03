@@ -21,13 +21,19 @@ studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\FFR\' EXPID filesep];
 % Conditions used in naming
 % Number of repetitions
 if strcmpi(EXPID, 'AA04') 
-%     warning('CB changed conds to [3 5] to recover from bug. Change back to [1 3 5] later'); 
     conds=[1 3 5];
     reps=3;
 end % if strcmpi(EXPID, 'AA04')
 
+% Determine number of subjects
+if isa(sid, 'cell')
+    nsub=length(sid);
+elseif isa(sid, 'char')
+    nsub=size(sid,2);
+end % 
+
 jobs={};
-for s=1:size(sid,1)
+for s=1:nsub
 
     % Convert subject IDs if cell or character array. 
     if isa(sid, 'cell')
@@ -309,10 +315,69 @@ for s=1:size(sid,1)
 %     anymore. 
     cABR_CzLE=gab_insert_task(cABR_CzLE, FILTTASK, 3);     
         
+    %% CREATE ADDITIONAL GPREP JOBS
+    
+    % CzRE
+    GPREP_CzRE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'CzRE'), 'Cz-RE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'TP10.*-1'}}, ...
+        'OCHLAB', {{'Cz-RE'}});
+    
+    % CzLERE
+    %   Cz referenced to average earlobe
+    GPREP_CzLERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'CzLERE'), 'Cz-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'-1.*((TP9+TP10)/2)'}}, ... % Cz relative to average earlobe reference. Recall that Cz was the original ref. 
+        'OCHLAB', {{'Cz-LERE'}});
+    
+    % 7CHLE
+    %   7 channel average relative to left earlobe
+    GPREP_7CHLE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', '7CHLE'), '7CH-LE', 'gab_task_CNT_CHANOPS', ...
+        ...'CHANOPS', {{'(TP9.*-1 + (FC1-TP9) + (FC2-TP9) + (C1-TP9) + (C2-TP9) + (CP1-TP9) + (CP2-TP9))/7'}}, ... % TP9*-1 is Cz referenced to left earlobe
+        'CHANOPS', {{'(FC1+FC2+C1+C2+CP1+CP2)/7 - TP9'}}, ... % dividing 6 channels by 7, then subtracting the reference essentially adds the original reference (Cz) into the average. 
+        'OCHLAB', {{'7CH-LE'}}); 
+    
+    % 7CHRE
+    %   7 channel average relative to right earlobe
+    GPREP_7CHRE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', '7CHRE'), '7CH-RE', 'gab_task_CNT_CHANOPS', ...
+        ...'CHANOPS', {{'(TP10.*-1 + (FC1-TP10) + (FC2-TP10) + (C1-TP10) + (C2-TP10) + (CP1-TP10) + (CP2-TP10))/7'}}, ... % TP9*-1 is Cz referenced to left earlobe
+        'CHANOPS', {{'(FC1+FC2+C1+C2+CP1+CP2)/7 - TP10'}}, ...
+        'OCHLAB', {{'7CH-RE'}});
+    
+    % 7CHLERE
+    %   7 channel average relative to average earlobe
+    GPREP_7CHLERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', '7CHLERE'), '7CH-LERE', 'gab_task_CNT_CHANOPS', ...
+        ...'CHANOPS', {{'(TP10.*-1 + (FC1-TP10) + (FC2-TP10) + (C1-TP10) + (C2-TP10) + (CP1-TP10) + (CP2-TP10))/7'}}, ... % TP9*-1 is Cz referenced to left earlobe
+        'CHANOPS', {{'(FC1+FC2+C1+C2+CP1+CP2)/7 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'7CH-LERE'}});
+    
+    %% CREATE ADDITIONAL ERP JOBS
+    % Cz
+    cABR_CzRE=MODIFY_ERP(cABR_CzLE, 'Cz-RE', onames); 
+    cABR_CzLERE=MODIFY_ERP(cABR_CzLE, 'Cz-LERE', onames); 
+    
+    %7CH
+    cABR_7CHLE=MODIFY_ERP(cABR_CzLE, '7CH-LE', onames); 
+    cABR_7CHRE=MODIFY_ERP(cABR_CzLE, '7CH-RE', onames); 
+    cABR_7CHLERE=MODIFY_ERP(cABR_CzLE, '7CH-LERE', onames); 
+    
     % PUT JOBS TOGETHER
+    
+    % GPREP JOBS
     jobs{end+1}=GPREP_CzLE;
+    jobs{end+1}=GPREP_CzRE; 
+    jobs{end+1}=GPREP_CzLERE;
+    jobs{end+1}=GPREP_7CHLE;
+    jobs{end+1}=GPREP_7CHRE;
+    jobs{end+1}=GPREP_7CHLERE; 
+    
+    % ERP JOBS
     jobs{end+1}=RAW_CzLE; 
     jobs{end+1}=cABR_CzLE; 
+    jobs{end+1}=cABR_CzRE;
+    jobs{end+1}=cABR_CzLERE;
+    jobs{end+1}=cABR_7CHLE;
+    jobs{end+1}=cABR_7CHRE;
+    jobs{end+1}=cABR_7CHLERE;
+    
 %     jobs{end+1}=FFR;
 %     jobs{end+1}=RAW; 
     
@@ -357,18 +422,80 @@ end % p=1:2
 
 end % CHANGE_PARAMS
 
-function JOB=MODIFY_JOB(JOB, JNAME, PARENT, varargin)
+function JOB=MODIFY_GPREP(JOB, JNAME, REFNAME, TNAME, varargin)
 %% DESCRIPTION:
 %
-%   Function to modify ARGUMENTS
+%   Function to modify AA04 GPREP. This proved useful when comparing
+%   referencing schemes quickly. 
 
 %% CHANGE JOBNAME
-JOB.jobName=JNAME;
+% JOB.jobName=strrep(JOB.jobName, 'CzLE', 'CzRE');
 
-%% CHANGE DEPENDENCIES
-JOB.parent=PARENT;
+%% MODIFY CNT_CHANOPS CALL
 
-%% PUT REPLACEMENT ARGS INTO VARIABLE
+% PUT REPLACEMENT ARGS INTO STRUCTURE
 ARGS=struct(varargin{:}); 
 
+%% CHANGE OUTPUT FILE NAMES
+for i=1:length(JOB.task{end}.args.OUT)
+    ARGS.OUT{i,1}=strrep(JOB.task{end}.args.OUT{i}, 'Cz-LE', REFNAME);
+end % i=1:length(JOB.task ...
+
+%% REPLACE ARGUMENTS
+[JOB]=gab_replace_task_args(JOB, TNAME, ARGS, JNAME);
+
 end % MODIFY_GPREP
+
+function JOB=MODIFY_ERP(JOB, REFNAME, FNAMES)
+%%DESCRIPTION:
+%
+%   Function to modify ERP jobs. This proved useful when comparing what
+%   were essentially exactly the same data, but filtered or referenced
+%   differently.
+%
+% INPUT:
+%
+% OUTPUT:
+%
+% Christopher W. Bishop
+%   University of Washington
+%   02/14
+
+JNAME=strrep(JOB.jobName, 'CzLE', strrep(REFNAME, '-', '')); 
+%% CHANGE INPUT FILE NAMES
+for i=1:length(FNAMES)
+    FNAMES{i}=strrep(FNAMES{i}, 'Cz-LE', REFNAME); 
+end % i=1:length(FNAMES)
+args.files=FNAMES;
+
+% Replace in gab_task_eeglab_loadcnt
+JOB=gab_replace_task_args(JOB, 'gab_task_eeglab_loadcnt', args, JNAME); 
+
+%% CHANGE DATASET NAME
+% Figure out where the appropriate task is
+ind=gab_find_task(JOB, 'gab_task_eeglab_saveset', 1); 
+
+% Pull out the parameters
+p=struct(JOB.task{ind}.args.params{:}); 
+
+% Change filename
+p.filename=strrep(p.filename, 'CzLE', strrep(REFNAME, '-', '')); 
+
+% Replace parameter in task
+JOB.task{ind}=CHANGE_PARAMS(JOB.task{ind}, {'filename', p.filename}); 
+
+%% REPLACE ERPNAME
+% Grab the task index
+ind=gab_find_task(JOB, 'gab_task_erplab_pop_savemyerp', 1); 
+
+% Pull out parameters
+p=struct(JOB.task{ind}.args.params{:}); 
+
+% Change erpname
+p.erpname=strrep(p.erpname, 'CzLE', strrep(REFNAME, '-', '')); 
+p.filename=strrep(p.filename, 'CzLE', strrep(REFNAME, '-', '')); 
+
+% Replace parameter list indatsk
+JOB.task{ind}=CHANGE_PARAMS(JOB.task{ind}, {'erpname', p.erpname, 'filename', p.filename}); 
+
+end % MODIFY_ERP
