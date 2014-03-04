@@ -31,7 +31,11 @@ function AA04_analysis(varargin)
 %   'plotphase':    bool, flag to plot phase (true to plot)
 %   'fnoise':       frequency noise range. See AA_FFT for details. 
 %   'bins':         integer array, bins to include in analysis.
-%   'plev':         integer, plot level (e.g., 1)
+%   'plev':         integer, plot level (e.g., 1). (Note: this has not been
+%                   well tested)
+%                       0: no plots generated
+%                       1: group plots generated
+%                       2: group AND subject level plots created
 %
 %   Analysis types:
 %
@@ -67,16 +71,65 @@ for e=1:length(p.erpext)
     ERPF=cell(length(p.sid),1); 
     
     % Compile file list
+    %   Also load ERPs; necessary for plotting later
     for s=1:length(p.sid)        
         ERPF{s}=fullfile(p.studydir, p.expid, p.sid{s}, 'analysis', [p.sid{s} p.erpext{e} '.mat']);         
+        [pathstr,name,ext]= fileparts(deblank(ERPF{s}));
+        ALLERP(s)=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
     end % s=1:length(p.sid)
+    
+    %% INPUT CHECKS
+    % Make sure we have sensible bin and channel information
+    if ~isfield(p, 'bins') || isempty(p.bins), p.bins=1:length(ALLERP(end).bindescr); end 
+    if ~isfield(p, 'chans') || isempty(p.chans), p.chans=size(ALLERP.bindata,1); end 
     
     %% TIME WAVEFORM PLOTS
     %   Time waveform plots with error bars (if specified).
+    if p.twave && p.plev>1    
+        
+        %% SUBJECT SPECIFIC PLOTS
+        for s=1:length(ALLERP)
+            ERP=ALLERP(s);
+            % Generate plot with appropriate error bars.
+            cb_pop_ploterps(ERP, p.bins, p.chans, ...
+                'SEM', num2str(p.nsem)); 
+            
+            % Change title
+            %   Append subject name and ERP extension to whatever is
+            %   already there. 
+            appendext(gcf, [p.sid{s} p.erpext{e}]); 
+        end % s=1:length(ERP)    
+        
+    end % p.twave && plev>1
+    
+    %% GROUP LEVEL WAVEFORM
+    if p.twave && p.plev>0
+        %   Use pop_gaverager to generate group average
+        gALLERP(e)=pop_gaverager(ALLERP, ...
+            'Erpsets', 1:length(ALLERP), ...
+            'ExcludeNullBin', 'on', ...
+            'Warning', 'off', ...
+            'SEM', 'on', ...
+            'weighted', 'off'); 
+        
+        % Rename ERP
+        gALLERP(e).erpname = [p.erpext{e} ' | N=' num2str(length(ALLERP))];
+        
+        % Plot out group data
+        
+        % These weird reassignments are necessary because pop_ploterps
+        % looks for the "ERP" variable by name. 
+        ERP=gALLERP(e); 
+        cb_pop_ploterps(ERP, p.bins, p.chans, ...
+            'SEM', num2str(p.nsem)); 
+        
+        % Append information to figure title
+        appendext(gcf, ['N=' num2str(length(ERP)) ' | ' p.sid{s} p.erpext{e}]); 
+    end % p.twave && p.plev>0
     
     %% FREQUENCY DECOMPOSITION
-        %   FFT decomposition on data (use AA_FFT.m)
-    if p.fft        
+    %   FFT decomposition on data (use AA_FFT.m)
+    if p.fft && p.plev>0     
     
         % Which figure are we on before the call?
         %   If no figures are open, calling gcf creates a figure. So we
@@ -101,7 +154,7 @@ for e=1:length(p.erpext)
     
     %% PHASE LOCKING VALUE (PLV)
     %   Plot out PLV for each frequency and bin (use AA_phasecoher.m).
-    if p.plv
+    if p.plv && p.plev>0
     
         if ~isempty(findobj('type', 'figure'))
             cfig=gcf+1; 
@@ -134,7 +187,7 @@ end % for e=1:length(p.erpext)
 
 %% TEMPORAL SIGNAL TO NOISE RATIO
 %   Plot out temporal signal to noise ratio for all ERPEXTs. Use AA_tSNR.m)
-if p.tsnr
+if p.tsnr && p.plev>0
     
     % Call AA_tSNR
     %   Basic temporal SNR calculations. For more information, please see
@@ -142,6 +195,7 @@ if p.tsnr
     AA_tSNR(p.sid, p.erpext, p.studydir, p.expid, p.nsem, p.tnoise, p.tsig, p.bins, p.plev);
     
 end % if p.tsnr
+
 end %% AA04_analysis
 
 function appendext(sfig, ext)
