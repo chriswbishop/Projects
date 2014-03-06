@@ -16,7 +16,7 @@ function AA04_analysis(varargin)
 %   'tnoise':       time window for temporal noise estimates (e.g., [-Inf
 %                   0]);
 %   'tsig':         time window for temporal signal estimate (e.g., [0
-%                   Inf])
+%                   Inf]). Units are milliseconds. 
 %   'frange':       frequency range for plotting purposes in AA_FFT and
 %                   AA_phasecoher.m.
 %   'tfreqs':       target frequencies for AA_FFT.
@@ -43,7 +43,9 @@ function AA04_analysis(varargin)
 %   'plv':          bool, run AA_phasecoher (PLV estimation).
 %   'tsnr':         bool, run AA_tSNR (temporal SNR estimation)   
 %   'twave':        bool, plot time waveforms
-%
+%   'xspec':        bool, run AA_cpsd_mscohere to estimate cross spectral
+%                   power density and magnitude squared coherence esimates
+%                   
 % OUTPUT:
 %
 %   Figures galore.

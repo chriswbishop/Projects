@@ -222,3 +222,11 @@ pip-log.txt
 *.fdt
 *.bdf
 *.wav
+*.avg
+*.fig
+*.pdf
+*.dll
+*.DOC
+*.txt
+*.xls
+*.docx

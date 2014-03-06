@@ -345,19 +345,68 @@ for s=1:nsub
     % 7CHLERE
     %   7 channel average relative to average earlobe
     GPREP_7CHLERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', '7CHLERE'), '7CH-LERE', 'gab_task_CNT_CHANOPS', ...
-        ...'CHANOPS', {{'(TP10.*-1 + (FC1-TP10) + (FC2-TP10) + (C1-TP10) + (C2-TP10) + (CP1-TP10) + (CP2-TP10))/7'}}, ... % TP9*-1 is Cz referenced to left earlobe
         'CHANOPS', {{'(FC1+FC2+C1+C2+CP1+CP2)/7 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
         'OCHLAB', {{'7CH-LERE'}});
     
+    % FC1LERE
+    GPREP_FC1LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'FC1LERE'), 'FC1-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'FC1 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'FC1-LERE'}});
+    
+    % FC2LERE
+    GPREP_FC2LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'FC2LERE'), 'FC2-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'FC2 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'FC2-LERE'}});
+    
+    % C1LERE
+    GPREP_C1LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'C1LERE'), 'C1-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'C1 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'C1-LERE'}});
+    
+    % C2LERE
+    GPREP_C2LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'C2LERE'), 'C2-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'C2 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'C2-LERE'}});
+    
+    % CP1LERE
+    GPREP_CP1LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'CP1LERE'), 'CP1-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'CP1 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'CP1-LERE'}});
+    
+    % CP2LERE
+    GPREP_CP2LERE=MODIFY_GPREP(GPREP_CzLE, strrep(GPREP_CzLE.jobName, 'CzLE', 'CP2LERE'), 'CP2-LERE', 'gab_task_CNT_CHANOPS', ...
+        'CHANOPS', {{'CP2 - ((TP9+TP10)/2)'}}, ... % essentially a 7 channel average.  
+        'OCHLAB', {{'CP2-LERE'}});
+    
     %% CREATE ADDITIONAL ERP JOBS
+    %   cABRs and RAW plots. Only a few RAW ERPs done for now.
     % Cz
     cABR_CzRE=MODIFY_ERP(cABR_CzLE, 'Cz-RE', onames); 
     cABR_CzLERE=MODIFY_ERP(cABR_CzLE, 'Cz-LERE', onames); 
     
-    %7CH
+    %% 7CH
+    
+    % cABRs
     cABR_7CHLE=MODIFY_ERP(cABR_CzLE, '7CH-LE', onames); 
     cABR_7CHRE=MODIFY_ERP(cABR_CzLE, '7CH-RE', onames); 
     cABR_7CHLERE=MODIFY_ERP(cABR_CzLE, '7CH-LERE', onames); 
+    
+    % Unfiltered data
+    RAW_7CHLERE=MODIFY_ERP(RAW_CzLE, '7CH-LERE', onames); 
+    
+    % Other single channel averages vs average earlobe
+    % FC1
+    cABR_FC1LERE=MODIFY_ERP(cABR_CzLE, 'FC1-LERE', onames); 
+    % FC2
+    cABR_FC2LERE=MODIFY_ERP(cABR_CzLE, 'FC2-LERE', onames); 
+    % C1
+    cABR_C1LERE=MODIFY_ERP(cABR_CzLE, 'C1-LERE', onames);     
+    % C2
+    cABR_C2LERE=MODIFY_ERP(cABR_CzLE, 'C2-LERE', onames); 
+    % CP1
+    cABR_CP1LERE=MODIFY_ERP(cABR_CzLE, 'CP1-LERE', onames); 
+    % CP2
+    cABR_CP2LERE=MODIFY_ERP(cABR_CzLE, 'CP2-LERE', onames); 
     
     % PUT JOBS TOGETHER
     
@@ -367,7 +416,13 @@ for s=1:nsub
     jobs{end+1}=GPREP_CzLERE;
     jobs{end+1}=GPREP_7CHLE;
     jobs{end+1}=GPREP_7CHRE;
-    jobs{end+1}=GPREP_7CHLERE; 
+    jobs{end+1}=GPREP_7CHLERE;
+    jobs{end+1}=GPREP_FC1LERE;
+    jobs{end+1}=GPREP_FC2LERE;
+    jobs{end+1}=GPREP_C1LERE;
+    jobs{end+1}=GPREP_C2LERE;
+    jobs{end+1}=GPREP_CP1LERE;
+    jobs{end+1}=GPREP_CP2LERE;
     
     % ERP JOBS
     jobs{end+1}=RAW_CzLE; 
@@ -377,9 +432,13 @@ for s=1:nsub
     jobs{end+1}=cABR_7CHLE;
     jobs{end+1}=cABR_7CHRE;
     jobs{end+1}=cABR_7CHLERE;
-    
-%     jobs{end+1}=FFR;
-%     jobs{end+1}=RAW; 
+    jobs{end+1}=cABR_FC1LERE;
+    jobs{end+1}=cABR_FC2LERE;
+    jobs{end+1}=cABR_C1LERE;
+    jobs{end+1}=cABR_C2LERE;
+    jobs{end+1}=cABR_CP1LERE;
+    jobs{end+1}=cABR_CP2LERE;
+    jobs{end+1}=RAW_7CHLERE;
     
 end % s
 
