@@ -83,7 +83,13 @@ function [Cxy, Pxy, F]=AA_cpsd_mscohere(X, Y, FSx, FSy, varargin)
 %% INPUT CHECKS
 
 % Convert inputs to structure
-p=struct(varargin{:}); 
+%   Users may also pass a parameter structure directly, which makes CWB's
+%   life a lot easier. 
+if length(varargin)>1
+    p=struct(varargin{:}); 
+else 
+    p=varargin{1};
+end %
 
 % Set default values.
 %   Note that p.bins is set in lddata if an ERP structure or ERP filename

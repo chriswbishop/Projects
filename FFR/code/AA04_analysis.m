@@ -36,6 +36,11 @@ function AA04_analysis(varargin)
 %                       0: no plots generated
 %                       1: group plots generated
 %                       2: group AND subject level plots created
+%   'wsig':         window for wave file signal. (default=[-Inf Inf]); 
+%   'xspec_window': window input for AA_cpsd_mscohere.m
+%   'xspec_nfft':   number of FFT bins for xspec 
+%   'xspec_nover':  number of overlapping samples
+%   
 %
 %   Analysis types:
 %
@@ -59,7 +64,13 @@ function AA04_analysis(varargin)
 %% CONVERT INPUT OPTIONS TO STRUCTURE
 %   Trying a new way of passing arguments around.
 p=struct(varargin{:}); 
+STIM=fullfile('..', 'stims', 'MMBF7.WAV'); 
 
+%% SET BASIC DEFAULTS
+%   CWB is trying to avoid setting defaults in teh file, but this is one
+%   that I think is reasonbly safe to set. If we don't set an analysis
+%   window for the MMBF7.WAV file, then use the whole time series. 
+try p.wsig; catch p.wsig=[-Inf Inf]; end 
 %% SET DEFAULT VALUES FOR INPUT ARGS
 %   Might be useful to set some optional input args here to reduce
 %   commandline work. CWB is always scared of defaults, though.
@@ -172,6 +183,23 @@ for e=1:length(p.erpext)
         appendext(cfig, p.erpext{e}); 
         
     end % if p.plv
+    
+    %% CROSS POWER SPECTRAL DENSITY
+    %   Looking at the cross-spectra between the stimulus (MMBF7.WAV, or
+    %   /ba/) might provide unique insight into whether or not the stimulus
+    %   is present in the time averaged waveform. 
+    if p.xspec        
+        % Compute CPSD and MSCOHERE
+        AA_xspec(STIM, ERPF, [], [], p); %...
+%             'plev', p.plev, ...
+%             'chans', p.chans, ...
+%             'ysig', p.tsig, ...
+%             'bins', p.bins, ...
+%             'window', p.xspec_window, ...
+%             'nover', p.xspec_nover, ...
+%             'nfft', p.xspec_nfft, ...
+%             'antype', 'all');                                
+    end % p.xspec
     
     %% XXX PERIODICITY ANALYSIS XXX
     %   An analysis to determine how well-represented the periodic aspects of
