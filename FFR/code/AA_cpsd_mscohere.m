@@ -22,11 +22,28 @@ function [Cxy, Pxy, F]=AA_cpsd_mscohere(X, Y, FSx, FSy, varargin)
 %
 %   X:  XXX
 %   Y:  XXX
+%       Note, you do not want to pass ERP.bindata directly as Y if multiple
+%       bins are used. The error checking will throw a shoe. Instead, just
+%       send the vertically concatenated filenames or arrayed in in a cell
+%       array and the data will load automatically. 
 %   FSx:    Sampling rate for time series X. Only used if X is a double
 %           array.
 %   FSy:    "" for time series Y. "" Only used if Y is a double array. 
 %
 %   Additional parameters:
+%
+%   Plotting:
+%
+%       'plev':     integer, plot level (e.g., 1). (Note: this has not been
+%                   well tested)
+%                       0: no plots generated
+%                       1: group plots generated
+%                       2: group AND subject level plots created (not
+%                       implemented as of 3/7/2014)
+%       'frange':   two element array specifying the frequency range for
+%                   plotting purposes. Note: this does not affect the
+%                   actual computations in any way, just the way the data
+%                   are visualized. 
 %
 %   Data clipping:
 %
@@ -81,6 +98,17 @@ function [Cxy, Pxy, F]=AA_cpsd_mscohere(X, Y, FSx, FSy, varargin)
 %   3/14
 
 %% INPUT CHECKS
+% Filenames need to be in a cell array
+if isa(X, 'char')
+    X={X}; 
+end % isa(X, 'char')
+
+if isa(Y, 'char')
+    % Assume these are vertically concatenated filenames
+    for n=1:size(Y,1)
+        y{n}={deblank(Y(s,:))}; 
+    end % for n=1:size(Y,1)
+end % if 
 
 % Convert inputs to structure
 %   Users may also pass a parameter structure directly, which makes CWB's
@@ -119,7 +147,7 @@ if ~isempty(fsx), FSx=fsx; clear fsx; end
 % Load data to compare to X. Infinite number of time series allowed, but
 % will be limited by memory constraints. 
 p.maxts=Inf;
-[Y, fsy]=lddata(Y,p); 
+[Y, fsy, LABELS]=lddata(Y,p); 
 % Reassign sampling rate if we need to. 
 if ~isempty(fsy), FSy=fsy; clear fsy; end
 
@@ -132,12 +160,34 @@ Y=windowdata(Y, FSy, p.ysig);
 % Match sampling rates
 MAXFS= max([FSx FSy]); 
 X=resample4TDT(X, MAXFS, FSx);
-Y=resample4TDT(Y, MAXFS, FSy);
+
+% Loop call to support multidimensional arrays
+y=nan(size(Y)); 
+for n=1:size(Y,3)
+    y(:,:,n)=resample4TDT(Y(:,:,n), MAXFS, FSy); 
+end 
+% Reassign
+Y=y; 
+clear y; 
+% Y=resample4TDT(Y, MAXFS, FSy);
 
 % Match stimulus length
 MAXLN= max([size(X,1) size(Y,1)]);
 X=[X; zeros(MAXLN-size(X,1),size(X,2))];
-Y=[Y; zeros(MAXLN-size(Y,1),size(Y,2))];
+
+% Slightly different call to support 3D matrices (e.g., when multiple ERP
+% files are passed in as Y. 
+%   Initialize a temporary variable as NaNs. Recall that matlab will
+%   populate a resized array with zeros by default, which makes it tough to
+%   spot errors. With a NaN array, any errors should be easy to spot.
+y=nan(MAXLN, size(Y,2), size(Y,3)); 
+for n=1:size(Y,3)
+    y(:,:,n)=[Y(:,:,n); zeros(MAXLN-size(Y,1),size(Y,2))];
+end
+
+% Reassign
+Y=y; 
+clear y; 
 
 % X=match_fs_length(X, FSx, MAXFS, MAXLN, p);
 % Y=match_fs_length(Y, FSy, MAXFS, MAXLN, p);
@@ -145,11 +195,18 @@ Y=[Y; zeros(MAXLN-size(Y,1),size(Y,2))];
 %% COMPUTE MSCOHERE
 %   Magnitude-squared coherence.
 if strcmpi(p.antype, 'mscohere') || strcmpi(p.antype, 'all')
-    for i=1:size(Y,2)        
-        [pxy, F]=mscohere(X,Y(:,i),p.window,p.noverlap,p.nfft, MAXFS);
-        Pxy(:,i)=pxy; 
-        clear pxy
-    end % for i=1:size(Y,2)
+    for n=1:size(Y,3)
+        for i=1:size(Y,2)        
+            [pxy, F]=mscohere(X,Y(:,i,n),p.window,p.noverlap,p.nfft, MAXFS);
+            Pxy(:,i,n)=pxy; 
+            clear pxy            
+        end % for i=1:size(Y,2)
+    end % for n=1:size(Y,3)
+       
+    % Set parameter input to set y-axis range
+    p.range=[0 1];
+    create_plot(F, Pxy, 'Frequency (Hz)', 'Magnitude Squared Coherence', LABELS, p);
+    
 end % strcmpi(p.antype)
 
 %% COMPUTE CPSD
@@ -157,12 +214,23 @@ end % strcmpi(p.antype)
 %
 %   This computation averages over time windows.
 if strcmpi(p.antype, 'cpsd') || strcmpi(p.antype, 'all')
-   for i=1:size(Y,2)        
-       [cxy, F]=cpsd(X,Y(:,i),p.window,p.noverlap,p.nfft, MAXFS);
-       Cxy(:,i)=cxy; 
-       clear cxy
-    end % for i=1:size(Y,2)
+    for n=1:size(Y,3)
+        for i=1:size(Y,2)        
+            [cxy, F]=cpsd(X,Y(:,i,n),p.window,p.noverlap,p.nfft, MAXFS);
+            Cxy(:,i,n)=cxy; 
+            clear cxy            
+        end % for i=1:size(Y,2)
+    end % for n=1:size(Y,3)
+    
+    % Try to create a plot
+    %   Checks to p.plev (plotting level) are made in create_plot.
+    p.range=[]; % use whatever autoscale gives us
+    create_plot(F, db(abs(Cxy)), 'Frequency (Hz)', 'Power Spectral Density (dB/Hz)', LABELS, p);
+        
 end % strcmpi(p.antype)
+
+%% PLOTTING FUNCTIONS
+%   Group level CPSD plot%% GET LINE SPECS
 
 %% ESTIMATE TIME DELAY BETWEEN TWO SIGNALS 
 %   Y relative to X (+ values mean that Y starts after X, - values mean
@@ -194,7 +262,7 @@ end % strcmpi(p.antype)
 
 end % AA_cpsd_mscohere
 
-function [X, FS]=lddata(X, p)
+function [X, FS, LABELS]=lddata(X, p)
 %% DESCRIPTION:
 %
 %   Function to dynamically load data with various input types. Kicks back
@@ -204,8 +272,6 @@ function [X, FS]=lddata(X, p)
 %
 %   Required
 %       X:      input data, or string to ERP file/wav file.
-%   
-%   Optional (sometimes)
 %       p:      additional parameters for loading data.
 %
 % OUTPUT:
@@ -213,6 +279,9 @@ function [X, FS]=lddata(X, p)
 %   Y:  double array, loaded data. NxM array. 
 %   FS: sample rate of data if data are loaded from file or contained in an
 %       ERP structure.
+%   LABELS: cell array of labels for plotting. This proved useful when
+%           plotting out ERP data with bin labels specified in the ERP
+%           structure.
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -220,13 +289,16 @@ function [X, FS]=lddata(X, p)
 
 %% INITIALIZE FS
 FS=[]; 
+LABELS={}; 
 
 %% DETERMINE DATA TYPE AND WHAT TO DO
 if isa(X, 'double')
     % If it's a double, just make sure it's the proper dimensions
-    % XXX
     
-    % If this is a multiple channel data set, throw an error
+    % If the number of time series exceeds p.maxts, throw an error. Useful
+    % when ensuring that a loaded wav file is not (or is) stereo. Typically
+    % we want a single time series for the "X" input to the parent
+    % function. 
     if min(size(X))>p.maxts
         error('Exceeds maximum number of dimensions'); 
     end % if min(size(X))>1
@@ -241,23 +313,38 @@ if isa(X, 'double')
         X=X';
     end % if ... 
     
-elseif isa(X, 'char')
+    % Create default labels for plotting
+    for n=1:size(X,2)
+        LABELS{n}=['TimeSeries (' num2str(n) ')'];
+    end % for n=1:size(X,2)
+    
+elseif isa(X, 'cell') 
+    % Filenames will be necessarily stored in a cell array.
     
     % Try reading in as a wav file. If that fails, assume it's an ERP file.
     % If THAT fails, then we're clueless.
     try
-        [X, FS]=wavread(X);  %#ok<DWVRD>
+        [X, FS]=wavread(X{1});  %#ok<DWVRD>
         
         % Sommersault to check data size and dimensions
         X=lddata(X, p); 
     catch
-        [pathstr,name,ext]= fileparts(X);
-        X=pop_loaderp('filename', [name ext], 'filepath', pathstr);   
+        
+        % In the event multiple file names are used, create a structure
+        % array, then do a sommersault to process those data.
+        for n=1:length(X)
+            [pathstr,name,ext]= fileparts(X{n});
+            x(n)=pop_loaderp('filename', [name ext], 'filepath', pathstr);   
+        end % for n=1:length(X)
+        
+        % Reassign to X
+        X=x;
+        clear x; 
         
         % Sommersault to load ERP structure
         %   Include additional parameters in call so we know what to do
         %   with the data.
-        [X, FS]=lddata(X, p); 
+        [X, FS, LABELS]=lddata(X, p); 
     end % try/catch   
     
 elseif iserpstruct(X)
@@ -272,86 +359,39 @@ elseif iserpstruct(X)
         error('No channels specified'); 
     elseif isempty(p.bins)        
         % If bins are not defined, then load all bins. 
-        p.bins=1:size(X.bindata,3); 
+        p.bins=1:size(X(1).bindata,3);  % assumes all ERP structures are the 
+                                        % same size. Safe since they will
+                                        % have to be for plotting purposes
+                                        % later. 
     end % if numel(p.chans)>1
     
     % Set sampling rate
-    FS=X.srate; 
+    %   Assumes all sampling rates are equal
+    %   Also assumes that bin labels are the same across all ERP
+    %   structures. Reasonably safe.
+    FS=X(1).srate;    
+    LABELS={X(1).bindescr{p.bins}}; % bin description labels
+    for n=1:length(X)
     
-    % Get a mask for the time domain of ERP data.
-    %   Masking is more generalized now and will be done in a call to
-    %   windowdata. 
-%     tmask=AA_maskdomain(X.times, p.tsig); 
+        % Truncate data
+        tx=squeeze(X(n).bindata(p.chans, :, p.bins)); 
+        
+        % Sommersault to reset data dimensions if necessary
+        [tx]=lddata(tx, p); 
+        
+        % Assign to growing data structure
+        x(:,:,n)=tx; 
+    end % for n=1:length(X)
     
-    % Truncate data
-    X=squeeze(X.bindata(p.chans, :, p.bins)); 
+    % Reassign to return variable X
+    X=x; 
+    clear x; 
     
-    % Sommersault to reset data dimensions if necessary
-    %   Recursive calls are cool, aren't they?
-    [X]=lddata(X, p); 
 else
-    error('Dunno what this is, kid');
+    error('Dunno what this is, kid.');
 end  % if ...
 
 end % function lddata
-
-function [X]=match_fs_length(X, FS, MAXFS, MAXLN, p)
-%% DESCRIPTION:
-%
-%   Function to resample (interpolate) stimuli and zero pad to a specified
-%   length.
-%
-% INPUT:
-%
-%   X:  data series as returned from lddata.m.
-%   FS: data sampling rate as returned from lddata.m
-%   MAXFS:  Maximum sampling rate. Lower sampling rates are interpolated to
-%           match the highest sampling rate.
-%   MAXLN:  time series are zeropadded to match the maximum stimulus
-%           length
-% OUTPUT:
-%
-%   X:  interpolated and zero padded time series.
-%
-% Christopher W. Bishop
-%   University of Washington
-%   3/14
-
-%% INPUT CHECKS
-
-% We don't currently support down sampling. This should never happen if the
-% user provides sensible inputs, but you never know. 
-if FS>MAXFS
-    error('Not intended for down sampling'); 
-end % if FS<MAXFS
-
-%% INTERPOLATE DATA
-% Interpolate using whatever we used for the TDT presentation system 
-%   Note that there might be some imprecision in this method. See
-%   resample4TDT.m for additional information
-X=resample4TDT(X, MAXFS, FS);
-
-% ERror checking to make sure our resampling didn't make the input longer
-% than the mwhat we think is the maximum length. 
-%   Must do this AFTER resampling to be safe. Errors generated during use
-%   on 3/6/2014 when resampling resulted in data with more samples than
-%   specified by MAXLN.
-if length(X)>MAXLN
-    error(['Your stimulus is bigger than the specified maximum length. ' ...
-        'Reconsider your input order. ' ...
-        'This could also be a problem with resampling']); 
-end % if length(X)>MAXLN
-
-%% DOUBLE CHECK DIMENSIONS
-%   Call lddata to make sure our stimulus dimensions are correct.
-p.maxts=Inf; % infinite number of data traces OK. 
-X=lddata(X, p); 
-
-%% ZERO PAD
-%   Zero pad each column
-X=[X; zeros(MAXLN-size(X,1),size(X,2))];
-
-end % function match_fs_length
 
 function X=windowdata(X, FS, TWIN)
 %% DESCRIPTION:
@@ -390,8 +430,123 @@ t=(0 : 1/FS : size(X,1)/FS-1/FS)';
 tmask=AA_maskdomain(t, TWIN); 
 
 % Apply mask
-X=X(tmask,:); 
+%   Added 3rd dimension argument in the event that multiple ERP files are
+%   used (e.g., when creating group averages based on time averaged
+%   waveforms. 
+X=X(tmask,:,:); 
 
 disp('CWB: Should we use a smarter windowing function (e.g., hamming??). Will likely reduce spectral splatter effects'); 
 
 end % X=windowdata(X, FS, p)
+
+function create_plot(X, Y, XLAB, YLAB, LABELS, p)
+%% DESCRIPTION:
+%
+%   Function to create data plots for AA_cpsd_mscohere. All plots at the
+%   time CWB wrote this were almost identical, so CWB decided to modularize
+%   the plotting function.
+%
+% INPUT:
+%
+%   X:
+%   Y:
+%   XLAB:
+%   YLAB:
+%   p:  
+%
+% OUTPUT:
+%
+%   A figure, man. A figure.
+%
+% Christopher W. Bishop
+%   University of Washington
+%   3/14
+
+% Group level plots
+if p.plev>0
+    figure, hold on
+    
+    % Massage NxS data matrix into Nx1xS matrix
+    if ndims(Y)==2 %#ok<ISMAT>
+        y(:,1,:)=Y;
+        Y=y; 
+    end % if ndims(X)==2
+    
+    % Attempt to get appropriate colors with NxS and NxBxS matrices
+    [colorDef, styleDef]=erplab_linespec(max([size(Y,2) p.bins]));
+    
+    
+    %% PLOT SEM
+    %   Plotted first for ease of legend labeling. Yes, I know I'm looping
+    %   through the data twice. Yes, it is inefficient. No, I don't care.    
+    for i=1:size(Y,2) % for each bin we are plotting
+        
+        % Put data into temporary matrix
+        tdata=squeeze(Y(:,i,:)); 
+        
+        % Plotting SEM when NSEM=0 causes some graphical issues and very
+        % slow performance. 
+        if p.nsem~=0
+            
+            % Select color definition
+            if ~isempty(p.bins) % && ndims(X)==3
+                cdef=colorDef{p.bins(i)};
+                sdef=styleDef{p.bins(i)};
+            else
+                cdef=colorDef{i};
+                sdef=styleDef{i};
+            end % if ~isempty(p.bins ...
+            
+            U=mean(tdata,2) + sem(tdata,2).*p.nsem; 
+            L=mean(tdata,2) - sem(tdata,2).*p.nsem; 
+            ciplot(L, U, X, cdef, 0.15); 
+            
+        end % if ~NSEM~=0
+        
+    end % for i=1:size(Y,2)    
+    
+    % Now plot the individual data traces 
+    for i=1:size(Y,2)
+        
+        % Select color definition
+            if ~isempty(p.bins) % && ndims(X)==3
+                cdef=colorDef{p.bins(i)};
+                sdef=styleDef{p.bins(i)};
+            else
+                cdef=colorDef{i};
+                sdef=styleDef{i};
+            end % if ~isempty(p.bins ...
+        
+        tdata=mean(squeeze(Y(:,i,:)),2); 
+        plot(X, tdata, 'Color', cdef, 'LineStyle', sdef, 'linewidth', 1.5);
+    end % for i=1:size(A,2)
+    
+    % Turn on grids
+    set(gca, 'XGrid', 'on', 'YGrid', 'on')
+    
+    % Markup figure
+    xlabel(XLAB)
+    ylabel(YLAB)
+    legend(LABELS, 'Location', 'northeast'); 
+    
+    % Set title string
+    titlstr= ['N=' num2str(size(Y,3)) ' | '];
+        
+    if ~isempty(p.bins)
+        titlstr=[titlstr 'Bins: [' num2str(p.bins) '] | ']; 
+    end % if ~isempty(p.bins)
+
+    title(titlstr); 
+    
+    % Set domain if user specifies it
+    if isfield(p, 'frange') && ~isempty(p.frange)
+        xlim(p.frange);
+    end % if isfield(p, 'frange') ...
+    
+    % Set range if specified
+    if isfield(p, 'range') && ~isempty(p.range)
+        ylim(p.range);
+    end % if isfield(...
+    
+end % if p.plev>0
+end % function create_plot
