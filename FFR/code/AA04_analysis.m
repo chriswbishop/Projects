@@ -80,18 +80,20 @@ try p.wsig; catch p.wsig=[-Inf Inf]; end
 %   ERP extension
 for e=1:length(p.erpext)
     
-    
-    
     % Initialize variables
     ERPF=cell(length(p.sid),1); 
     
     % Compile file list
     %   Also load ERPs; necessary for time waveform plotting later
+    
     for s=1:length(p.sid)        
         ERPF{s}=fullfile(p.studydir, p.expid, p.sid{s}, 'analysis', [p.sid{s} p.erpext{e} '.mat']);         
-        [pathstr,name,ext]= fileparts(deblank(ERPF{s}));
-        ALLERP(s)=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
+%         [pathstr,name,ext]= fileparts(deblank(ERPF{s}));
+%         ALLERP(s)=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
     end % s=1:length(p.sid)
+    
+    % Load data into structure    
+    [~, ~, ~, ALLERP]=AA_loaddata(ERPF, 'maxts', Inf); 
     
     %% INPUT CHECKS
     % Make sure we have sensible bin and channel information
@@ -101,8 +103,7 @@ for e=1:length(p.erpext)
     %% TIME WAVEFORM PLOTS
     %   Time waveform plots with error bars (if specified).
     if p.twave && p.plev>1    
-        
-        
+                
         %% SUBJECT SPECIFIC PLOTS
         for s=1:length(ALLERP)
             ERP=ALLERP(s);

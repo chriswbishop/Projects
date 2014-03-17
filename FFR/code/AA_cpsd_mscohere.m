@@ -158,16 +158,21 @@ Cxy=[]; % CPSD estimates
 % Load reference time series to which all others will be compared
 %   This should have a maximum of ONE time series. 
 p.maxts=1;
-[X, fsx]=lddata(X,p);
+[X, fsx]=AA_loaddata(X,p); 
+% [X, fsx]=lddata(X,p);
 % Reassign sampling rate if we need to. 
 if ~isempty(fsx), FSx=fsx; clear fsx; end 
 
 % Load data to compare to X. Infinite number of time series allowed, but
 % will be limited by memory constraints. 
 p.maxts=Inf;
-[Y, fsy, LABELS]=lddata(Y,p); 
-% Reassign sampling rate if we need to. 
+[Y, fsy, LABELS]=AA_loaddata(Y,p); 
 if ~isempty(fsy), FSy=fsy; clear fsy; end
+
+% Squeeze Y data
+%   Often necessary if an ERP structure or filename is loaded. This
+%   removes the channel dimension.
+if numel(size(Y))>3, Y=squeeze(Y); end 
 
 %% WINDOW DATA
 %   Set analysis window as specified by p.xsig and p.ysig
