@@ -182,6 +182,9 @@ if PLEV>0
         plot(f, tdata, 'Color', colorDef{BINS(i)}, 'LineStyle', styleDef{BINS(i)}, 'linewidth', 1.5);
     end % for i=1:size(A,2)
     
+    % Turn on grids
+    set(gca, 'XGrid', 'on', 'YGrid', 'on');
+    
     xlabel('Frequency (Hz)')
     ylabel('|Y(f)| (uV)')
     legend(LABELS, 'Location', 'Best'); 

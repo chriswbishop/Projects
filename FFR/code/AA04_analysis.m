@@ -80,6 +80,8 @@ try p.wsig; catch p.wsig=[-Inf Inf]; end
 %   ERP extension
 for e=1:length(p.erpext)
     
+    
+    
     % Initialize variables
     ERPF=cell(length(p.sid),1); 
     
@@ -100,6 +102,7 @@ for e=1:length(p.erpext)
     %   Time waveform plots with error bars (if specified).
     if p.twave && p.plev>1    
         
+        
         %% SUBJECT SPECIFIC PLOTS
         for s=1:length(ALLERP)
             ERP=ALLERP(s);
@@ -117,6 +120,17 @@ for e=1:length(p.erpext)
     
     %% GROUP LEVEL WAVEFORM
     if p.twave && p.plev>0
+        
+        %% SET Y-SCALE
+        %   CWB wanted the same y-axis range to make comparisons easier across
+        %   conditions.
+        if ~isempty(strfind(p.erpext{e}, 'cABR'))
+            yscale=[-0.5 .5];
+            xscale=[ALLERP(1).times(1) 220]; % just plot first 220 msec
+        else
+            yscale=[];
+            xscale=[];
+        end % yscale
         %   Use pop_gaverager to generate group average
         gALLERP(e)=pop_gaverager(ALLERP, ...
             'Erpsets', 1:length(ALLERP), ...
@@ -134,7 +148,11 @@ for e=1:length(p.erpext)
         % looks for the "ERP" variable by name. 
         ERP=gALLERP(e); 
         cb_pop_ploterps(ERP, p.bins, p.chans, ...
-            'SEM', num2str(p.nsem)); 
+            'SEM', num2str(p.nsem), ...
+            'LegPos', 'none', ...
+            'AutoYlim', 'off', ...
+            'yscale', yscale, ...
+            'xscale', xscale); 
         
         % Append information to figure title
         appendext(gcf, ['N=' num2str(length(ERP)) ' | ' p.sid{s} p.erpext{e}]); 
