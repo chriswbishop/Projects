@@ -37,6 +37,7 @@ function [MASK, BOUNDS]=AA_maskdomain(DOMAIN, BOUNDS)
 %% INPUT CHECKS
 %   If the DOMAIN or BOUNDS are not the correct size, throw an error
 if max(size(DOMAIN))<2, error('Invalid DOMAIN.'); end
+if numel(BOUNDS)==1, BOUNDS=[BOUNDS BOUNDS]; end   % allow for single frequency masking.
 if length(BOUNDS)~=2 || min(size(BOUNDS))>1, error('Invalid BOUNDS.'); end
 
 MASK=(DOMAIN>=BOUNDS(1) & DOMAIN<=BOUNDS(2));

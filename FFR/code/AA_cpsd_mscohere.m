@@ -245,7 +245,7 @@ if strcmpi(p.antype, 'cpsd') || strcmpi(p.antype, 'all')
     % Try to create a plot
     %   Checks to p.plev (plotting level) are made in create_plot.
     p.range=[]; % use whatever autoscale gives us
-    create_plot(F, db(abs(Cxy)), 'Frequency (Hz)', 'Power Spectral Density (dB/Hz)', LABELS, p);
+    create_plot(F, db(abs(Cxy)), 'Frequency (Hz)', 'Cross Power Spectral Density (dB/Hz)', LABELS, p);
         
 end % strcmpi(p.antype)
 
