@@ -168,9 +168,11 @@ if p.plev>0
          surf(T(tmask), F(fmask), x(fmask, tmask), 'edgecolor', 'none');
          view(0,90);
          axis tight
+         
          % Figure axis labels
          xlabel('Time (s)');
          ylabel('Frequency (Hz)');
+         zlabel('PSD (dB/Hz)'); 
          
          % Maximum value
          mval=ceil(max(max(abs(x(fmask, tmask)))));
@@ -179,7 +181,11 @@ if p.plev>0
          if strcmpi(p.caxis, 'symmetric')
             caxis([-1*mval; mval]);
          end % if strcmpi(p.caxis ...
-         colorbar
+         
+         % Add colorbar and label
+         %  Rotation label
+          t = colorbar('peer',gca);
+          set(get(t,'ylabel'),'String', 'PSD (dB/Hz)', 'Rotation', 270);
          
          % Set title
          title(['N=' num2str(size(P,4)) ' | ' LABELS{n}]);
