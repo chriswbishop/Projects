@@ -62,15 +62,21 @@ Y=[]; % Complex FFT
 A=[]; % One sided amplitude data
 P=[]; % Phase data
 
+% Use centralized loading function, AA_loaddata, to get data into proper
+% format.
+[~,~,LABELS,ALLERP]=AA_loaddata(ERPF); 
+
 %% REPEAT FOR ALL SUBJECTS
-for s=1:length(ERPF)
+for s=1:length(ALLERP)
     
     %% FILE PARTS OF INPUT FILE
-    [pathstr,name,ext]= fileparts(deblank(ERPF{s}));
+%     [pathstr,name,ext]= fileparts(deblank(ERPF{s}));
 
     %% LOAD THE ERPFILE
-    ERP=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
+%     ERP=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
 
+    ERP=ALLERP(s); 
+    
     %% WHICH BINS TO ANALYZE?
     %   Analyze all bins by default
     if ~exist('BINS', 'var') || isempty(BINS)
@@ -81,8 +87,8 @@ for s=1:length(ERPF)
     [colorDef, styleDef]=erplab_linespec(max(BINS));
     
     %% EXTRACT PARAMETERS
-    LABELS={ERP.bindescr{BINS}}; % bin description labels
-    BLMASK=1:find(ERP.times<0,1,'last'); % base line time mask
+%     LABELS={ERP.bindescr{BINS}}; % bin description labels
+%     BLMASK=1:find(ERP.times<0,1,'last'); % base line time mask
     TMASK=find(ERP.times>=0, 1, 'first'):length(ERP.times); % post-stim mask.
         
     DATA=squeeze(ERP.bindata(:,:,:)); 
