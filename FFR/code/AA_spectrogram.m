@@ -45,11 +45,10 @@ function [S, F, T, P]=AA_spectrogram(X, varargin)
 %                   'symmetric':    colorscale is symmetric around 0
 %                   'default':      color scale is scaled however MATLAB
 %                                   does it by default. 
+%   'tfreqs':   double array, creates line plots at each target frequency.
+%               Note: Only supports *exact* frequency matches (for now). 
 %
 % Additional features:
-%   - Create a PSD vs. time line graph for specific frequencies
-%       - Will need a clean way to deal with tfreqs that are not exact
-%       matches. See TFREQS in AA_FFT for ideas. 
 %   - Add phase plotting options (essentially a time-frequency plot of
 %   phase)
 %   
