@@ -121,7 +121,7 @@ end %
 %% INITIALIZE VARIABLES
 
 % Check for initialized sampling rate
-try FS=p.fs; catch FS=[]; end 
+try FS=p.fs; catch FS=[]; p.fs=[]; end 
 
 % Accept all data types by default
 %   Will need to change default as support for new data types are added and
@@ -136,6 +136,8 @@ LABELS={};
 % DTYPE
 %   Data type loaded. 
 DTYPE=[];
+ODAT=[]; % original data. Not always assigned below.
+
 %% DETERMINE DATA TYPE AND WHAT TO DO
 if isa(X, 'double') || isa(X, 'single')
     % If it's a double, just make sure it's the proper dimensions
@@ -168,7 +170,7 @@ if isa(X, 'double') || isa(X, 'single')
     % Create default labels for plotting
     for n=1:size(X,2)
         LABELS{n}=['TimeSeries (' num2str(n) ')'];
-    end % for n=1:size(X,2)
+    end % for n=1:size(X,2)   
     
 elseif isa(X, 'char')
     
@@ -240,8 +242,11 @@ elseif isa(X, 'cell')
     % If we know the sampling rate, then pass hold it constant in
     % sommersault. 
     if ~isempty(FS), p.fs=FS; end 
+    dtype=p.datatype;
+    p.datatype=[];
     [X, FS, LABELS]=AA_loaddata(X, p);              
-    
+    p.datatype=dtype;
+    clear dtype; 
 elseif iscntstruct(X)
     DTYPE=5; 
     % If we're dealing with a CNT structure
@@ -327,5 +332,18 @@ end  % if ...
 if ~ismember(DTYPE, p.datatype)
     error('Data type not supported by invoking function');
 end % if ~ismember(DTYPE, p.datatype)
+
+% Check sampling rate
+%   Set sampling rate if it's unknown from AA_loaddata but specified by the
+%   user. 
+%
+%   If FS is unknown by AA_loaddata and the user doesn't supply one, then
+%   throw an error. We won't be able to make much sense out of this later
+%   during plotting routines.
+if ~isempty(p.fs) && isempty(FS)
+    FS=p.fs;
+elseif isempty(p.fs) && isempty(FS)
+    error('Sampling rate undefined.'); 
+end % if ~isempty(p.fs) && ... 
 
 end % function AA_loaddata
