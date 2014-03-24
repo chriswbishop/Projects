@@ -126,6 +126,7 @@ for m=1:size(X,3)
         %   Different calls depending on window information.
         %   If it's a time (in sec), convert to samples
         if numel(p.window)==1
+            error('CWB thinks this is an error'); 
             w=size(X,1)/FS*p.window;
         else
             w=p.window;
@@ -193,14 +194,15 @@ if p.plev>0
         if n==1
             for t=1:length(p.tfreqs)
                 figure, hold on               
-                                
+                [colorDef, styleDef]=erplab_linespec(size(P,3));
+                
                 % Create new frequency mask
                 %  Requires an exact frequency match (for now)
                 fmask=AA_maskdomain(F, p.tfreqs(t)); 
              
                 % Plot SEM
                 if p.sem~=0
-                    [colorDef, styleDef]=erplab_linespec(size(P,3));
+                    
                     
                     % Loop through each bin.
                     %   This is messy, should find a better way to do this.
