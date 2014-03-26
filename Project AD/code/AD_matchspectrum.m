@@ -1,37 +1,50 @@
-function AD_matchspectrum(X, Y, varargin)
+function [Pxx, Pyy, Pyyo, Y, Yo, FS]=AD_matchspectrum(X, Y, varargin)
 %% DESCRIPTION:
 %
 %   Christi Miller needed a way to match the long-term spectra of two sound
 %   files. CWB decided to modularize this functionality so we can do it
 %   quickly in the future.
 %
-%   XXX
-%   Here's a brief overview of how XXX
+%   The function will accept several data types as an input (see
+%   AA_loaddata for more information) and allows the user to specify many
+%   of the parameters. Many of these parameters (e.g., window, nfft, etc.)
+%   will ultimately affect the estimated power spectral densities (PSDs)
+%   and subsequently the corrections applied. 
 %
-%       1. Ensuring that the sampling rates are identical. If they are not,
+%   Here's a brief overview of what this function does to estimate and
+%   match long-term spectra between two time series. 
+%
+%       1. Ensure that the sampling rates are identical. If they are not,
 %       the lower sampling rate is resampled to the highest sampling rate.
+%       Routine will use 'resample'.
 %
-%       2. Signals are zero-padded to equal length (required for frequency
-%       domain filtering)
+%       2. The power spectral densities (PSDs) are estimated prior to
+%       zero-padding. CWB reasoned that zero-padding prior to PSD
+%       estimation could lead to underestimated PSD values (due to adding
+%       segments with no signal into the average), so opted to leave
+%       zero-padding until later. 
 %
-%       3. Power spectra are computed using pwelch or FFT. While both are
-%       reasonable approaches, CWB recommends using pwelch or some other
-%       spectral estimator to avoid fitting (and correcting for) noise in
-%       the frequency decomposition. 
+%       3. Compute PSD differences. Differences are only computed over a
+%       specific frequency range if the user specifies this. Otherwise, the
+%       entire frequency range is corrected. 
+%       
+%       4. Zero-pad signals to same length
 %
-%       4. The difference in the power spectra are computed.
+%       5. Apply correction to *unnormalized* FFT of signal. 
 %
-%       5. The difference is sign inverted (multiplied by -1) and added to
-%       the data in time series Y. 
-%
-%       6. Time series in Y are resampled to their original sampling rate
-%       and written to file. 
+%       6. Inverse FFT to get back to time domain. Only real components are
+%       used, since often times ifft will decide there are residual
+%       imaginary values (on the order of 10E-16) and can typically be
+%       safely ignored. See below for further discussion
+%           http://www.dsprelated.com/showmessage/122422/1.php
 %
 % INPUT:
 %
 %   X:  The reference signal that all other time series are matched to. The
 %       format can be anything supported by AA_loaddata. This includes wav
 %       files or two-dimensional matrices with double or single precision.
+%       See AA_loaddata for further information. 
+%
 %   Y:  Time series to match to X.
 %
 %   Additional Parameters:
@@ -46,9 +59,12 @@ function AD_matchspectrum(X, Y, varargin)
 %
 %       'mtype':    string, match type. Will match power, phase, or both. 
 %                   ('power' | 'phase' | 'both') (default = 'power')
-%                       Note: currently only tested with 'power'
+%                       Note: currently only tested with 'power'. Phase is
+%                       not developed and probably isn't terribly useful in
+%                       this context. 
 %       
-%       'plev': XXX Plot power spectra before and after filtering XXX
+%       'plev': 	bool, creates summary plots for visualization.
+%                   (true or false; default=true); 
 %
 %       'frange':   frequency range over which to do spectral matching
 %                   (default = [-Inf Inf])
@@ -68,9 +84,31 @@ function AD_matchspectrum(X, Y, varargin)
 %                   must be at *least* the length of the longest, resampled
 %                   time signal. Otherwise the spectral estimation and
 %                   matching won't work properly.
+%       
+%       'write':    bool, write data to file. Data are written to WAV
+%                   files. (true | false | default=false) 
 %
 %       'taper':    XXX something to taper beginning and end of sounds XXX
-%                   
+%                       - Not implemented (no need at time of testing).                    
+%
+% OUTPUT:
+%   
+%   Pxx:    Power spectral density of X series (in dB).
+%
+%   Pyy:    Power spectral density of Y (input) series (in dB).
+%
+%   Pyyo:   PSD of *corrected* Y series (corresponds to Yo return). (dB).
+%
+%   Y:      Input time series.
+%
+%   Yo:     Output time series. Can be written to file
+%
+%   FS:     Sampling rate of all return variables.
+%
+%   Development:
+%       Currently the plotting routines require recomputing power spectral
+%       density. Slow. Could be done in a smarter way, says CWB, and will
+%       probably save considerable computation time with long time series. 
 %
 %   Tests:
 %       Run with the same sound file as X and Y. Shouldn't see any
@@ -115,14 +153,15 @@ Y=resample(Y, FS, FSy); % resample Y
 mxl = max([length(X) length(Y)]);
 
 %% INPUT CHECK AND DEFAULTS
-%   XXX
+%   Set some default values.
 if ~isfield(p, 'mtype') || isempty(p.mtype), p.mtype='power'; end 
 if ~isfield(p, 'nfft') || isempty(p.nfft); p.nfft=mxl; end 
 if p.nfft<mxl, error(['nfft must be at least at least as long as your longest signal (' num2str(mxl) ' samples)']); end 
-try p.plev; catch p.plev=1; end % plot output by default
+try p.plev; catch p.plev=true; end % plot output by default
 try p.frange; catch p.frange=[-Inf Inf]; end % adjust whole frequency range by default
 try p.window; catch p.window=[]; end % use default windowing option
 try p.noverlap; catch p.noverlap=[]; end % use default noverlap
+try p.write; catch p.write=false; end % write data to wav file
 
 % Convert p.window from seconds to samples
 if ~isempty(p.window) && numel(p.window)==1
@@ -144,12 +183,12 @@ end % if ~isempty(p.window) && numel(p.window)==1
 %       2) It's not (yet) crucial for the two time series to match in
 %       length. This is due to the algorithm employs for spectral
 %       estimation (a periodogram - essentially an average spectrum over
-%       several time windows). The crucial piece of information is to 
+%       several time windows). 
 %
 %       3) We use PSDs because the normalization procedure accounts for
 %       differences in frequency bin size (crudely "resolution"). Power
 %       spectra (not densities) do not and thus preclude direct comparisons
-%       of normalized FFTs of signals of varying length (sampling number). 
+%       of normalized FFTs of signals of varying length (sample number). 
 %           For further discussion on this, see 
 %               http://qsun.eng.ua.edu/cpw_web_new/generic1.htm
 %
@@ -226,7 +265,6 @@ ffto=pow.*cos(ang) + pow.*sin(ang).*1i; % multiple y by imaginary number
 Yo=real(ifft(ffto)); % Sometimes Yo is returning total nonsense (complex values). Not sure why ... maybe just grab the "real" part of it??
 clear ffto; 
 
-%% DOUBLE
 %% APPLY RAMP
 %   Potentially apply windowing function at beginning/end of sounds to
 %   prevent any popping introduced through filtering. 
@@ -237,8 +275,12 @@ clear ffto;
 %       If values are exceeded (never happened during testing), CWB
 %       recommends scaling the time waveforms by max(abs(data)) where data
 %       is the time series. 
-if max(abs(Yo))>1
-    error('Sound clipped. Needs additional processing.'); 
+%
+%       CWB eventually ran into this problem and had to implement the
+%       suggested scaling above. 
+if max(max(abs(Yo)))>1
+	warning('Sounds clipped. Scaling all output data!'); 
+    Yo=Yo./max(max(abs(Yo))).*0.98; % normalize to 0.98 to prevent errors from wavwrite below
 end % if max(abs(Yo))>1; 
 
 %% GET Pyy OF INPUTS and Pyyo of OUTPUTS
@@ -286,14 +328,14 @@ Pyyo=Pyyo - mean(Pyyo(fmask));
 
 %% CREATE PLOTS
 %   Create plots for visualization if user so desires (p.plev>0)
-if p.plev>0
+if p.plev
     
     % Plot time waveforms
     %   Plot waveforms of time series before (Y) and after (Yo) spectrum
     %   matching.
     T=0:1/FS:(size(Y,1)-1)/FS; 
     T=AA_loaddata(T, 'fs', FS);  % set correct dimensions
-    lineplot2d(T, [Y Yo], 'legend', {{[LABELS{:} repmat('(in)', size(Y,2),1)] [LABELS{:} repmat('(out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Amplitude (V)', 'title', 'Time Waveforms'); % opens a new figure
+    lineplot2d(T, [Y Yo], 'legend', {{[LABELS{:} repmat(' (in)', size(Y,2),1)] [LABELS{:} repmat(' (out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Amplitude (V)', 'title', 'Time Waveforms'); % opens a new figure
     
     % Plot PSDs (before)
     lineplot2d(F, [Pxx Pyy Pyyo], 'legend',{{'Reference' [LABELS{:} repmat(' (in)', size(Y,2),1)] [LABELS{:} repmat(' (out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'PSD (dB/Hz)', 'title', 'Power Spectral Densities');
@@ -302,4 +344,15 @@ if p.plev>0
     %   Note that a mean difference isn't informative since we do not match
     %   levels here. 
     lineplot2d(F, [Pyyo - Pxx*ones(1, size(Pyyo,2))], 'legend', {{[LABELS{:} repmat(' (diff)', size(Y,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'dB/Hz', 'title', 'PSD Difference (Pxx - Pyyo)');
-end % p.plev>0
+    
+end % p.plev
+
+%% WRITE DATA TO FILE
+if p.write
+    
+    % write each time series to file
+    for t=1:size(Yo,3)
+        wavwrite(Yo(:,t), FS, [LABELS{t} '.wav']); 
+    end % for t=1:size(Y,3)
+    
+end % p.write
