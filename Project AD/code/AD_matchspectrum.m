@@ -88,6 +88,11 @@ function [Pxx, Pyy, Pyyo, Y, Yo, FS]=AD_matchspectrum(X, Y, varargin)
 %       'write':    bool, write data to file. Data are written to WAV
 %                   files. (true | false | default=false) 
 %
+%       'yminmax':  two-element double array, describes range of y-values.
+%                   (E.g. [-1 1]). Default = [-1 1]. If these values are
+%                   exceeded in any series in Y, all data are scaled to
+%                   0.98 of the maximum (or minimum) range. 
+%
 %       'taper':    XXX something to taper beginning and end of sounds XXX
 %                       - Not implemented (no need at time of testing).                    
 %
@@ -138,6 +143,11 @@ p.datatype=[2]; % currently only allow user to use a WAV file.
 [X, FSx]=AA_loaddata(X, p); 
 [Y, FSy, LABELS]=AA_loaddata(Y, p); 
 
+%% USER DEFINED SAMPLING RATE
+%   In the event that AA_loaddata can't determine the sampling rate, we'll
+%   need to assign what the user provides us. 
+%       XXX undeveloped XXX
+
 %% MATCH SAMPLING RATE
 %   Sampling rates must be matched between time series for frequency domain
 %   filtering and spectral estimation. 
@@ -162,6 +172,7 @@ try p.frange; catch p.frange=[-Inf Inf]; end % adjust whole frequency range by d
 try p.window; catch p.window=[]; end % use default windowing option
 try p.noverlap; catch p.noverlap=[]; end % use default noverlap
 try p.write; catch p.write=false; end % write data to wav file
+try p.yminmax; catch p.yminmax=[-1 1]; end % p.yminmax
 
 % Convert p.window from seconds to samples
 if ~isempty(p.window) && numel(p.window)==1
@@ -244,7 +255,7 @@ dPyy=Pxx*ones(1,size(Y,2))-Pyy; % compute difference (in dB)
 %
 %       For further discussion see 
 %           https://www.evernote.com/shard/s353/nl/57578676/14146ec7-588f-495c-953b-cf45abeae451
-ffty=fft(Y); % column wise FFT
+ffty=fft(Y, p.nfft); % column wise FFT
 pow=db(abs(ffty).^2, 'power'); % power (in dB); equivalently db(abs(fftx)), I think
 ang=angle(ffty); % phase angle
 
@@ -265,9 +276,9 @@ ffto=pow.*cos(ang) + pow.*sin(ang).*1i; % multiple y by imaginary number
 Yo=real(ifft(ffto)); % Sometimes Yo is returning total nonsense (complex values). Not sure why ... maybe just grab the "real" part of it??
 clear ffto; 
 
-%% APPLY RAMP
-%   Potentially apply windowing function at beginning/end of sounds to
-%   prevent any popping introduced through filtering. 
+%% CLIP TIME SERIES
+%   Reduce time series to original length (before any zero-padding).
+Yo=Yo(1:size(Y,1),:); 
 
 %% CHECK FOR CLIPPING
 %   Do values exceed [-1 1]? If so, throw an error for now. Or, since
@@ -278,10 +289,24 @@ clear ffto;
 %
 %       CWB eventually ran into this problem and had to implement the
 %       suggested scaling above. 
-if max(max(abs(Yo)))>1
-	warning('Sounds clipped. Scaling all output data!'); 
-    Yo=Yo./max(max(abs(Yo))).*0.98; % normalize to 0.98 to prevent errors from wavwrite below
+%
+%       CWB ammended to support different y range. [-1 1] is the default
+%       and required for (most) wav files. 
+if min(min(Yo))<p.yminmax(1) || max(max(Yo))>p.yminmax(2)
+	warning('Y range exceeded. Scaling all output data!'); 
+    Yo=Yo./max(max(abs(Yo))).*(0.98*max(abs(p.yminmax))); % normalize to 0.98 to prevent errors from wavwrite below
 end % if max(abs(Yo))>1; 
+
+%% APPLY RAMP
+%   Potentially apply windowing function at beginning/end of sounds to
+%   prevent any popping introduced through filtering. 
+%       XXX CWB Has not had a need for this yet, so it isn't implemented
+%       XXX
+
+%% RESAMPLE SOUNDS
+%   Should we resample time series to original sampling rate? 
+%   CWB thinks this is probably a bad idea anyway, so we don't do that for
+%   now. 
 
 %% GET Pyy OF INPUTS and Pyyo of OUTPUTS
 %   We change a lot of this during processing, so better to get it again to
@@ -320,11 +345,6 @@ Pyyo=db(Pyyo, 'power');
 Pxx=Pxx - mean(Pxx(fmask));
 Pyy=Pyy - mean(Pyy(fmask));
 Pyyo=Pyyo - mean(Pyyo(fmask));
-
-%% RESAMPLE SOUNDS
-%   Should we resample time series to original sampling rate? 
-%   CWB thinks this is probably a bad idea anyway, so we don't do that for
-%   now. 
 
 %% CREATE PLOTS
 %   Create plots for visualization if user so desires (p.plev>0)
