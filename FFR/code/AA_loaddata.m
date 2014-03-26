@@ -226,7 +226,8 @@ elseif isa(X, 'cell')
                 try p.t1; catch p.t1=0; end 
                 
                 % If it's a CNT file
-                x(n)=loadcnt(X{n}, 'lddur', p.lddur, 't1', p.t1);                 
+                x(n)=loadcnt(X{n}, 'lddur', p.lddur, 't1', p.t1);
+                FS=x(n).header.rate; 
             otherwise
                 error('File extension not recognized');         
         end % switch 
