@@ -126,8 +126,10 @@ for m=1:size(X,3)
         %   Different calls depending on window information.
         %   If it's a time (in sec), convert to samples
         if numel(p.window)==1
-            error('CWB thinks this is an error'); 
-            w=size(X,1)/FS*p.window;
+            warning('Window conversion not working properly'); 
+%             error('CWB thinks this is an error'); 
+%             w=size(X,1)/FS*p.window;
+            w=FS*p.window; 
         else
             w=p.window;
         end % if numel(p.window)==1 ...
@@ -208,8 +210,8 @@ if p.plev>0
                     %   This is messy, should find a better way to do this.
                     for b=1:size(P,3)
                         tdata=squeeze(P(fmask, tmask, b, :));                        
-                        U=mean(tdata,2) + sem(tdata, 2).*p.sem;
-                        L=mean(tdata,2) + sem(tdata, 2).*p.sem.*-1;
+                        U=mean(tdata, 3) + sem(tdata, 3).*p.sem;
+                        L=mean(tdata, 3) + sem(tdata, 3).*p.sem.*-1;
                         ciplot(L, U, T(tmask), colorDef{b}, 0.15);  
                     end % for b=1:size(P,3)
                     
@@ -217,7 +219,9 @@ if p.plev>0
              
                 % Raw data traces
                 for b=1:size(P,3)
-                    tdata=mean(squeeze(P(fmask, tmask, b, :)),2);
+                    tdata=mean(P(fmask, tmask, b, :), 4);
+                    tdata=squeeze(tdata); 
+%                     tdata=mean(squeeze(P(fmask, tmask, b, :)),2);
                       
                     % Plot time waveform
                     plot(T(tmask), tdata, colorDef{b}, 'LineStyle', styleDef{b}, 'linewidth', 1);
