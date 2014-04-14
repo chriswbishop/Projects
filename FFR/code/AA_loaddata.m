@@ -298,7 +298,8 @@ elseif iserpstruct(X)
     %   Assumes all sampling rates are equal
     %   Also assumes that bin labels are the same across all ERP
     %   structures. Reasonably safe.
-    FS=X(1).srate;    
+    FS=X(1).srate;   
+    p.fs=FS; 
     LABELS={X(1).bindescr{p.bins}}; % bin description labels
     for n=1:length(X)
     
