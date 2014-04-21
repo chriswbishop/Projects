@@ -171,7 +171,12 @@ if isa(X, 'double') || isa(X, 'single')
     for n=1:size(X,2)
         LABELS{n}=['TimeSeries (' num2str(n) ')'];
     end % for n=1:size(X,2)   
-    
+
+elseif isempty(X)
+    % Sometimes users pass in nothing (silly), but we can handle that just
+    % fine. 
+    display('No data to load'); 
+    FS=NaN; 
 elseif isa(X, 'char')
     
     % Don't set DTYPE here since there's nothing special or telling about a
@@ -323,7 +328,7 @@ elseif iserpstruct(X)
 elseif iseegstruct(X)
     DTYPE=4;
     warning('EEG structure loading is underdeveloped'); 
-    ODAT=X;     
+    ODAT=X;    
 else
     error('Dunno what this is, kid.');
 end  % if ...
