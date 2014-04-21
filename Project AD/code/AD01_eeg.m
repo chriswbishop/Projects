@@ -1,4 +1,4 @@
-function AD01_eeg(target, masker, code)
+function [stim, FS]=AD01_eeg(code)
 %% DESCRIPTION:
 %
 %   Paradigm for presenting stimuli/sending trigger codes for Project AD,
@@ -19,9 +19,59 @@ function AD01_eeg(target, masker, code)
 %   University of Washington 
 %   4/14
 
+% Intialize randomization seed
+rng('shuffle', 'twister');
+
 %% INPUT CHECKS AND DEFAULTS
-circuit=''; 
-isi=[1 2]; % isi in sec
+%   Circuit for AD01
+circuit=fullfile('..', 'RP_Files', 'AD01.rcx'); 
+
+isi=[1.5 3]; % ISI in sec
+                % analysis will rqeuire EEG to be bandpass filtered
+                % (offline) to 1 - 9 Hz, so we need a large jitter window
+                % to cancel out 1 Hz noise ... I think ... CWB needs to
+                % think about this in earnest in the future. 
+                %
+                % ISIs will be randomized between the first and second
+                % element of isi. 
+
+fslevel=2;  %  2.441406250000000e+04
+trigdur=0.02;   % TRIGger DURation (sec)
+
+%% CODE DEPENDENT SETTINGS
+%   - Set SNR
+%   - Set Target and Noise stimulus
+switch code
+    case {1, 2, 3}
+        target=fullfile('..', 'stims', 'Alice_track01_sc.wav');
+        masker=fullfile('..', 'stims', 'Alice_spshn.wav'); 
+        ntrials=50;
+    case {4, 5, 6}
+        target=fullfile('..', 'stims', 'MLST-SpeechTrack.wav'); 
+        masker=fullfile('..', 'stims', 'MLST_spshn.wav');
+        ntrials=50;
+    case {7}
+        target=fullfile('..', 'stims', '20 ms-NoiseBurst.wav'); 
+        masker='';
+        ntrials=150; 
+    otherwise
+        error('Unknown condition code'); 
+end % switch code
+
+% Code dependent SNR setting
+switch code
+    case {1, 4, 7}
+        % Sound presented in quiet so SNR irrelevant
+        osnr=NaN;
+    case {2, 5}        
+        % 0 dB SNR
+        osnr=0; 
+    case {3, 6}
+        % -9 dB SNR
+        osnr=-9; 
+    otherwise
+        error('Unknown code'); 
+end % switch
 
 %% LOAD STIMULI
 %   Load using AA_loaddata. Only accept wave/double/single data types. 
@@ -29,32 +79,33 @@ p.datatypes=[1 2]; % restrict to wav and single/double array
 [target, tfs]=AA_loaddata(target, p); 
 [masker, mfs]=AA_loaddata(masker, p); 
 
-%% LOWPASS FILTER
-%   Potentially lowpass filter stimuli (4 kHz) similar to Ding and Simon.
-%       - Probably necessary for spectrotemporal estimates using auditory
-%       models. See Ding and Simon (2012b) and Ding and Simon (2013)
-
 %% INITIALIZE TDT
+% ESTABLISH CONNECTION WITH RP 2.1
+RP=actxcontrol('RPCo.x',[0 0 0 0]);
+RP.ConnectRP2('USB', 1);
 
-% % ESTABLISH CONNECTION WITH RP 2.1
-% RP = actxcontrol('RPco.x',[5 5 26 26]);
-% % RP=actxcontrol('RPCo.x',[0 0 0 0]);
-% RP.ConnectRP2('USB', 1);
-% 
-% % CLEAR Control Object File (COF)
-% RP.ClearCOF; % First clear the COF
-% 
-% % LOAD COF AND SET SAMPLING RATE
-% RP.LoadCOFsf(CIRCUIT, FSLEVEL); 
-% 
-% % GET SAMPLING RATE
-% FS = RP.GetSFreq; 
+% CLEAR Control Object File (COF)
+RP.ClearCOF; % First clear the COF
 
-FS=44101.25; % hard code at some random, non-integer sampling rate. 
+% LOAD COF AND SET SAMPLING RATE
+RP.LoadCOFsf(circuit, fslevel); 
+
+RP.Halt;
+
+% Zero out Buffer
+%   Prevents silly mistakes like playing left-over sound from previous
+%   setup.
+RP.WriteTagV('Snd', 0, zeros(1, RP.GetTagVal('WavSize'))); 
+
+% GET SAMPLING RATE
+FS = RP.GetSFreq; 
 
 %% RESAMPLE STIMULI
 %   Resample to TDT sampling rate
-target=resample4TDT(target, FS, tfs); 
+target=resample4TDT(target, FS, tfs);
+% If masker is empty, then just write zeros (no masker). 
+%   Need to set sampling rate to FS as well (not tfs). 
+if isempty(masker), masker=zeros(size(target)); mfs=FS; end
 masker=resample4TDT(masker, FS, mfs); 
 
 % Error check for stimulus size
@@ -70,24 +121,16 @@ if length(target)~=length(masker), error('Series lengths differ'); end
 %   Set SNR using RMS estimation.
 %
 %   Potentially allow for other SNR procedures (e.g., peak, etc.). 
+
+% Standardize target
+%   No longer necessary after CWB matched RMS values (see evernote)
+% maxamp=1.3;
+% target=target./maxamp; % maximum amplitude we'll run into with SNR of -9 for any stimulus. 
 trms=rms(target); 
 mrms=rms(masker);
 
 % initial SNR
 isnr=db(trms)-db(mrms); 
-
-% Code dependent SNR setting
-switch code
-    case {1}
-        % Case 1, output SNR irrelevant
-        osnr=NaN;
-    case {2}        
-        osnr=0; 
-    case {3}
-        osnr=-9; 
-    otherwise
-        error('Unknown code'); 
-end % switch
 
 % Set SNR
 if ~isnan(osnr)
@@ -102,44 +145,58 @@ if ~isnan(osnr)
                             % details. 
 end % ~isnan(osnr)
 
+
 %% MIX STIMULI
 %   Add target and masker together. 
 switch code
-    case {1}
+    case {1, 4, 7} % don't mix if it's in quiet
         stim=target; 
     otherwise
         stim=target+masker;
 end % switch code
 
+% Flip dimensions for TDT's sake. 
+%   TDT wants a 1 x N vector. 
+stim=stim'; 
+
 %% CLIPPING CHECK
 %   Double check that no clipping has occurred after summation. If so, then
-%   normalize stimuli (divide by absolute maximum value).
-stim = stim./max(max(abs(stim)));
+%   throw an error.
+%       This means the normalization routine above failed
+if max(abs(stim))>1, error('Stimulus clipped'); end 
 
-%% SEND STIMULI TO TDT
-%   Upload stimuli to TDT
+%% SET TDT TAG VALUES
+%   Several of these must be converted to samples first. 
+if ~RP.SetTagVal('WavSize', length(stim)), error('Parameter not set!'); end
+if ~RP.WriteTagV('Snd', 0, stim), error('Data not sent to TDT!'); end
+if ~RP.SetTagVal('TrigDur', round(trigdur*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
+if ~RP.SetTagVal('TrigCode', code), error('Parameter not set!'); end               % Trigger CODE
+
+%% START THE CIRCUIT
+RP.Run;
 
 %% MAIN CONTROL LOOP
 %   Main stimulus control loop.
 
-%% SET SOA
-%   Set stimulus onset asynchrony (SOA) by setting serial buffer size in
-%   TDT circuit. 
-%
-%   Or, set a timer/counter to initialize the stimulus at a set interval
-%   (probably cleaner). Importantly, though, we want TDT to control the
-%   timing as much as possible. Just have MATLAB send some values along. 
-%
-%   Also do quick sanity check to make sure that buffer size is large
-%   enough to allow for longest SOA.
+% make an 'edit' uicontrol to show the sweeps
+tdisplay = uicontrol('style','edit','string', sprintf('Trial Number\nTime to Completion'),'units','normalized','position',[.2 .6 .6 .3], 'Max', 3, 'Min', 1);
 
-%% PRESENT STIMULI
-%   Should be handled automatically by TDT hardware/circuit
-
-%% WAIT FOR STIMULI TO COMPLETE
-%   Maybe set a flag or monitor buffer position. Dunno exactly. 
-
-%% TIMING CHECK
-%   Track timing to make sure our SOA is approximately what it should be. 
-%
-%   Not sure how to do this cleanly yet. 
+JIT=[];
+for n=1:ntrials
+    
+    % Present stimulus/drop trigger
+    RP.SoftTrg(1);
+    tic;
+    jit=rand(1)*(diff(isi))+isi(1); 
+    JIT(n)=jit; 
+    % Round estimated remaining time to tenths place
+    set(tdisplay,'string',sprintf(['Trial Number: %d (of %d).\n' ...
+    'Estimated Time to Completion: %.1d s'],n, ntrials, round((length(stim)./FS + mean(isi))*(ntrials-n)*10)/10));
+    
+    % Loop until stimulus is finished
+    while ~RP.GetTagVal('TrialStatus'), end 
+    
+    % Pause for a while
+    pause(jit); 
+    toc
+end % for n=1:ntrials
