@@ -9,11 +9,20 @@ function [stim, FS]=AD01_eeg(code)
 %
 % INPUT:
 %
-%   XXX
+%   code:   condition and trigger code
+%               1:  Alice in quiet
+%               2:  Alice at 0 dB SNR (masker = speech shaped noise)
+%               3:  Alice at -9 dB SNR (" ")
+%               4:  MLST in quiet
+%               5:  MLST at 0 dB SNR (" ")
+%               6:  MLST at -9 dB SNR (" ")
+%               7:  20 ms white noise burst in quiet
+%               255:    For testing ONLY!
 %
 % OUTPUT:
 %
-%   XXX
+%   stim:   single channel stimulus (target + masker)
+%   fs:     sampling rate of stimulus
 %
 % Christopher W. Bishop
 %   University of Washington 
@@ -54,13 +63,21 @@ switch code
         target=fullfile('..', 'stims', '20 ms-NoiseBurst.wav'); 
         masker='';
         ntrials=150; 
+    case {255}
+        tfs=22050; 
+        target=sin_gen(1000,0.1, tfs);
+        r=window(@hann, 0.02*tfs); % 10 ms on/off ramp
+        target(1:length(r)/2)=target(1:length(r)/2).*r(1:length(r)/2);
+        target(end-length(r)/2 : end)=(target(end-length(r)/2 : end).*r(length(r)/2:length(r)));
+        masker='';        
+        ntrials=100; 
     otherwise
         error('Unknown condition code'); 
 end % switch code
 
 % Code dependent SNR setting
 switch code
-    case {1, 4, 7}
+    case {1, 4, 7, 255}
         % Sound presented in quiet so SNR irrelevant
         osnr=NaN;
     case {2, 5}        
@@ -76,6 +93,7 @@ end % switch
 %% LOAD STIMULI
 %   Load using AA_loaddata. Only accept wave/double/single data types. 
 p.datatypes=[1 2]; % restrict to wav and single/double array
+if exist('tfs', 'var') && ~isempty(tfs), p.fs=tfs; end % work around for test click
 [target, tfs]=AA_loaddata(target, p); 
 [masker, mfs]=AA_loaddata(masker, p); 
 
