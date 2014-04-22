@@ -45,7 +45,8 @@ isi=[1.5 3]; % ISI in sec
                 % element of isi. 
 
 fslevel=2;  %  2.441406250000000e+04
-trigdur=0.02;   % TRIGger DURation (sec)
+trigdur=0.02;
+trigdelay=1.24; % Delay trigger by 1.24 ms. 
 
 %% CODE DEPENDENT SETTINGS
 %   - Set SNR
@@ -66,9 +67,9 @@ switch code
     case {255}
         tfs=22050; 
         target=sin_gen(1000,0.1, tfs);
-        r=window(@hann, 0.02*tfs); % 10 ms on/off ramp
-        target(1:length(r)/2)=target(1:length(r)/2).*r(1:length(r)/2);
-        target(end-length(r)/2 : end)=(target(end-length(r)/2 : end).*r(length(r)/2:length(r)));
+%         r=window(@hann, 0.02*tfs); % 10 ms on/off ramp
+%         target(1:length(r)/2)=target(1:length(r)/2).*r(1:length(r)/2);
+%         target(end-length(r)/2 : end)=(target(end-length(r)/2 : end).*r(length(r)/2:length(r)));
         masker='';        
         ntrials=100; 
     otherwise
@@ -188,6 +189,7 @@ if max(abs(stim))>1, error('Stimulus clipped'); end
 if ~RP.SetTagVal('WavSize', length(stim)), error('Parameter not set!'); end
 if ~RP.WriteTagV('Snd', 0, stim), error('Data not sent to TDT!'); end
 if ~RP.SetTagVal('TrigDur', round(trigdur*FS)), error('Parameter not set!'); end       % TRIGger DURation in samples
+if ~RP.SetTagVal('trigdelay', trigdelay), error('Parameter not set!'); end       
 if ~RP.SetTagVal('TrigCode', code), error('Parameter not set!'); end               % Trigger CODE
 
 %% START THE CIRCUIT
