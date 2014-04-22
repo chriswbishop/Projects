@@ -55,11 +55,11 @@ switch code
     case {1, 2, 3}
         target=fullfile('..', 'stims', 'Alice_track01_sc.wav');
         masker=fullfile('..', 'stims', 'Alice_spshn.wav'); 
-        ntrials=50;
+        ntrials=20;
     case {4, 5, 6}
         target=fullfile('..', 'stims', 'MLST-SpeechTrack.wav'); 
         masker=fullfile('..', 'stims', 'MLST_spshn.wav');
-        ntrials=50;
+        ntrials=20;
     case {7}
         target=fullfile('..', 'stims', '20 ms-NoiseBurst.wav'); 
         masker='';
@@ -67,9 +67,9 @@ switch code
     case {255}
         tfs=22050; 
         target=sin_gen(1000,0.1, tfs);
-%         r=window(@hann, 0.02*tfs); % 10 ms on/off ramp
-%         target(1:length(r)/2)=target(1:length(r)/2).*r(1:length(r)/2);
-%         target(end-length(r)/2 : end)=(target(end-length(r)/2 : end).*r(length(r)/2:length(r)));
+        r=window(@hann, 0.02*tfs); % 10 ms on/off ramp
+        target(1:length(r)/2)=target(1:length(r)/2).*r(1:length(r)/2);
+        target(end-length(r)/2 : end)=(target(end-length(r)/2 : end).*r(length(r)/2:length(r)));
         masker='';        
         ntrials=100; 
     otherwise
