@@ -230,3 +230,8 @@ pip-log.txt
 *.txt
 *.xls
 *.docx
+*.au
+*.aup
+*.mp3
+*.mp4
+*.zip
