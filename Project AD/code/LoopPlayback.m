@@ -1,14 +1,18 @@
 function LoopPlayback(X, Y, varargin)
 
+nchans=8;
 [X, FS]=AA_loaddata(X); 
-[Y, FS]=AA_loaddata(Y);
+X=X*ones(1, nchans); 
+X=resample(X, 44100, FS); 
+% [Y, FS]=AA_loaddata(Y);
 
 InitializePsychSound;
-portaudio = PsychPortAudio('Open', [], [], 0, FS, size(X,2)); 
+portaudio = PsychPortAudio('Open', 20, [], 0, 44100, size(X,2)); 
 
 % Divide X into chunks
 %   Load it into the buffer in chunks
-nblocks=4;
+nreps=10; 
+nblocks=3;
 blocksize=ceil(size(X,1)/nblocks); %
 disp(num2str(blocksize/FS)); 
 % nblocks=ceil(size(X,1)/blocksize); 
@@ -20,11 +24,12 @@ PsychPortAudio('FillBuffer', portaudio, X(1:blocksize*2,:)');
 for i=3:nblocks
     
     % Start two-channel audio playback
-    PsychPortAudio('Start', portaudio, 2, 0, 1, [], 1);  
+    PsychPortAudio('Start', portaudio, inf, 0, 1, [], 1);  
     
     % Wait for block to finish
     status=PsychPortAudio('GetStatus', portaudio);
-    while status.PositionSecs<blocksize/FS
+    startpos=status.PositionSecs; 
+    while status.PositionSecs - startpos <blocksize/FS
         status=PsychPortAudio('GetStatus', portaudio);
     end % Loop for a bit
     
