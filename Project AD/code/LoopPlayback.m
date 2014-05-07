@@ -1,13 +1,13 @@
 function LoopPlayback(X, Y, varargin)
 
-nchans=8;
+nchans=2;
 [X, FS]=AA_loaddata(X); 
 X=X*ones(1, nchans); 
 X=resample(X, 44100, FS); 
 % [Y, FS]=AA_loaddata(Y);
 
 InitializePsychSound;
-portaudio = PsychPortAudio('Open', 20, [], 0, 44100, size(X,2)); 
+portaudio = PsychPortAudio('Open', 4, [], 0, 44100, size(X,2)); 
 
 % Divide X into chunks
 %   Load it into the buffer in chunks
