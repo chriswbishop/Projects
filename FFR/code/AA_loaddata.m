@@ -75,6 +75,8 @@ function [X, FS, LABELS, ODAT, DTYPE]=AA_loaddata(X, varargin)
 %       T is the number of time points, and N is the number of data traces
 %       (e.g., bins in an ERP structure) from a single file, and S is the 
 %       number of files passed in (usually 1 per subject). 
+%           Note: Figuring out the labels for multichannel WAV files might
+%                 take some doing.
 %
 %   FS: The sampling rate of the data.
 %   
@@ -192,6 +194,7 @@ elseif isa(X, 'cell')
     
     % Try reading in as a wav file. If that fails, assume it's an ERP file.
     % If THAT fails, then we're clueless.
+    x=[];
     for n=1:length(X)
         [pathstr,name,ext]= fileparts(X{n});
         
@@ -201,7 +204,8 @@ elseif isa(X, 'cell')
                 % If this is a WAV file
                 DTYPE=2;
                 [tx, FS]=wavread(X{n});  %#ok<DWVRD>
-                x(:,n)=tx; % assumes a single channel file, which is fine
+                x=[x tx]; % multichannel support                
+               
             case {'.mat', '.erp', '.set'}
                 % If the data are either an ERP structure (stored as a .mat
                 % or .erp file extension) or an EEG struture (stored as a
