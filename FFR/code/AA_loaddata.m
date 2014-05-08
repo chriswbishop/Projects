@@ -141,7 +141,13 @@ DTYPE=[];
 ODAT=[]; % original data. Not always assigned below.
 
 %% DETERMINE DATA TYPE AND WHAT TO DO
-if isa(X, 'double') || isa(X, 'single')
+if isempty(X)
+    % Sometimes users pass in nothing (silly), but we can handle that just
+    % fine. 
+    display('No data to load'); 
+    FS=NaN; 
+    
+elseif isa(X, 'double') || isa(X, 'single')
     % If it's a double, just make sure it's the proper dimensions
     %   Do same data massaging for single precision (common in EEGLAB). 
     DTYPE=1;
@@ -173,12 +179,7 @@ if isa(X, 'double') || isa(X, 'single')
     for n=1:size(X,2)
         LABELS{n}=['TimeSeries (' num2str(n) ')'];
     end % for n=1:size(X,2)   
-
-elseif isempty(X)
-    % Sometimes users pass in nothing (silly), but we can handle that just
-    % fine. 
-    display('No data to load'); 
-    FS=NaN; 
+    
 elseif isa(X, 'char')
     
     % Don't set DTYPE here since there's nothing special or telling about a
