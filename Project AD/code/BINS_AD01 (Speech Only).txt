@@ -1,0 +1,11 @@
+bin 1
+Alice (Quiet)
+.{1}
+
+bin 2
+Alice (0 dB SNR)
+.{2}
+
+bin 3
+Alice (-9 dB SNR)
+.{3}

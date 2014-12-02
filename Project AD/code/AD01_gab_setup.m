@@ -16,7 +16,7 @@ function jobs = AD01_gab_setup(sid, EXPID)
 if ~exist('EXPID', 'var') || isempty(EXPID), EXPID='AD01'; end
 if ~strcmp('AD01', EXPID), error('Wrong setup file??'); end
 
-studyDir=['C:\Users\cwbishop\Documents\GitHub\Projects\Project AD\' EXPID filesep];
+studyDir=['D:\GitHub\Projects\Project AD\' EXPID filesep];
 
 % Conditions used in naming
 % Number of repetitions
@@ -391,8 +391,8 @@ for s=1:nsub
     ERPF_LERE{s} = fullfile(ERP_LERE.task{end}.args.params{6}, ERP_LERE.task{end}.args.params{4});
     
     % Gather jobs
-    jobs{end+1}=GPREP; 
-    jobs{end+1}=ICA; 
+%     jobs{end+1}=GPREP; 
+%     jobs{end+1}=ICA; 
     jobs{end+1}=ERP_LERE; 
     jobs{end+1}=ENV_LERE;
     
