@@ -227,8 +227,6 @@ pip-log.txt
 *.pdf
 *.dll
 *.DOC
-*.txt
-*.xls
 *.docx
 *.au
 *.aup
