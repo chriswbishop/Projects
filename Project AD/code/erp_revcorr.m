@@ -1,4 +1,4 @@
-function [rf, pcc] = erp_revcorr(ERP, audio_track, varargin)
+function [rf, pcc, audio_env, erp_data] = erp_revcorr(ERP, audio_track, varargin)
 %% DESCRIPTION:
 %
 %   This function performs reverse correlation between an ERP data set and
