@@ -1,4 +1,4 @@
-function [rf, pcc, audio_env, erp_data] = erp_revcorr(ERP, audio_track, varargin)
+function [rf, pcc, audio_env, erp_data, FS] = erp_revcorr(ERP, audio_track, varargin)
 %% DESCRIPTION:
 %
 %   This function performs reverse correlation between an ERP data set and
@@ -52,7 +52,9 @@ opts = varargin2struct(varargin{:});
     'time_window',  opts.time_window .* 1000);  % convert time stamp to millisecond
 
 % Time-frequency decomposition and envelope estimation of audio_track
-audio_env = audSpec_env(audio_track, erp_fs, opts.n_frequency_bands);
+%   This also resamples the audio data to match the sampling rate of our
+%   ERP data. 
+[audio_env, audio_fs, CF] = audSpec_env(audio_track, erp_fs, opts.n_frequency_bands);
 
 % Only use first channel
 audio_env = audio_env{1}; 
@@ -63,5 +65,13 @@ audio_env = repmat(audio_env, 1, 1, size(erp_data,3));
 % Run reverse correlation
 [rf, pcc] = RFgen_multichan(audio_env, erp_data, erp_fs, 1, opts.n_frequency_bands > 1); 
 
-% plotting routines
-display('Test'); 
+% Create some potentially useful plots
+if opts.pflag
+    
+    % STRF Plot
+    
+    % Predictive Plot
+    
+    % 
+    
+end % if opts.pflag
