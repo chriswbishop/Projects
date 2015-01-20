@@ -151,14 +151,15 @@ for s=1:numel(SID)
                 'n_frequency_bands', 1, ...
                 'seed_boosting', false, ...
                 'audio_channels', 2, ...
-                'receptive_field_duration', 1}})); 
+                'receptive_field_duration', 1, ...
+                'remove_mean', false}})); 
     
     % clear options
     clear opts; 
     
     %% JOBS
     jobs{end+1}=REV_CORR_ERP;   
-    jobs{end+1} = REV_CORR_ANALYSIS;
+%     jobs{end+1} = REV_CORR_ANALYSIS;
         
 end % s
 

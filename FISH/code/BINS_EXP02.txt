@@ -1,7 +1,11 @@
 bin 1
-Attend Auditory
+Sentence Onset: Attend Auditory
 .{11}
 
 bin 2
-Attend Visual
+Sentence Onset: Attend Visual
 .{12}
+
+bin 3
+Pulse 1
+.{100}
